@@ -246,7 +246,7 @@
     state.lastWasPass = true;
     state.passes += 1;
     state.koKey = null;
-    if (state.passes >= 2) finishByScore();
+    if (state.passes >= 2) enterMarkingByPasses();
   }
 
   function resign() {
@@ -366,10 +366,11 @@
     };
   }
 
-  function finishByScore() {
-    state.ended = true;
-    state.result = scoreBoard();
-    state.resultDismissed = false;
+  function enterMarkingByPasses() {
+    state.phase = "marking";
+    state.deadStones = new Set();
+    state.aiProposing = false;
+    state.endingNotice = "양측이 패스해서 종국에 도달했어요. 죽은 돌을 탭해 표시한 뒤 채점하세요.";
   }
 
   function chooseMove() {
@@ -555,20 +556,21 @@
   function proposeEnding() {
     if (state.ended || state.phase !== "play") return;
     if (state.thinking) return;
-    if (aiAgreesToEnd()) {
-      state.endingNotice = "AI도 종국에 동의했어요. 죽은 돌을 탭해 표시하고 채점하세요.";
-      state.phase = "marking";
-      state.deadStones = new Set();
-      render();
-    } else {
-      state.endingNotice = "AI는 아직 더 두고 싶어해요. 한 수 더 둬보세요.";
+    if (state.moveNumber < state.size * state.size * 0.25) {
+      state.endingNotice = "아직 종국하기엔 일러요. 조금 더 둔 뒤 다시 시도해주세요.";
       window.clearTimeout(proposeEnding.timer);
       proposeEnding.timer = window.setTimeout(() => {
         state.endingNotice = "";
         render();
       }, 2200);
       render();
+      return;
     }
+    state.phase = "marking";
+    state.deadStones = new Set();
+    state.aiProposing = false;
+    state.endingNotice = "죽은 돌을 탭해 표시한 뒤 채점하세요.";
+    render();
   }
 
   function aiAgreesToEnd() {
