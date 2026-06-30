@@ -1423,7 +1423,7 @@
     const playable = !state.ended && !state.thinking && state.turn === state.human && state.phase === "play";
     return `
       <div class="actions">
-        <button class="btn icon" data-hint ${hintLeft && playable ? "" : "disabled"}>${icon("bulb")} 힌트 ${hintLeft}/${HINT_LIMIT}</button>
+        <button class="btn icon" data-hint ${hintLeft && playable ? "" : "disabled"}>${lucide("icons/lightbulb.svg")} 힌트 ${hintLeft}/${HINT_LIMIT}</button>
         <button class="btn icon" data-undo ${state.history.length && state.phase === "play" ? "" : "disabled"}>${icon("undo")} 되돌리기</button>
         <button class="btn primary icon" data-propose-end ${state.ended || state.phase !== "play" || state.thinking ? "disabled" : ""}>${icon("end")} 끝내기</button>
         <button class="btn danger icon" data-resign ${state.ended || state.phase !== "play" ? "disabled" : ""}>${icon("flag")} 기권</button>
