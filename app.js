@@ -2,7 +2,8 @@
   const EMPTY = 0;
   const BLACK = 1;
   const WHITE = 2;
-  const KOMI = 6.5;
+  // 코미(덤): 5×5 입문은 25점짜리 작은 판이라 6.5는 과해 0.5만, 그 외는 표준 6.5.
+  const komiFor = (size) => (size === 5 ? 0.5 : 6.5);
   const COLS = "ABCDEFGHJKLMNOPQRST".split("");
   const HINT_LIMIT = 3;
   const TIPS_OPENING = [
@@ -27,8 +28,9 @@
     hard:   { title: "고급", sub: "더 오래 생각해요", icon: "icons/swords.svg",  tone: "red" },
   };
   const SIZE_COPY = {
-    9:  { title: "빠른 한 판", sub: "9 x 9 · 5분",  time: 5 * 60 },
-    19: { title: "정식판",     sub: "19 x 19 · 20분", time: 20 * 60 },
+    5:  { title: "초고속 한 판", sub: "5 x 5 · 1분",  time: 2 * 60 },
+    9:  { title: "빠른 한 판",   sub: "9 x 9 · 5분",  time: 5 * 60 },
+    19: { title: "정식판",       sub: "19 x 19 · 20분", time: 20 * 60 },
   };
   function timeBudget(size) {
     return SIZE_COPY[size] ? SIZE_COPY[size].time : 20 * 60;
@@ -39,7 +41,7 @@
   }
 
   const state = {
-    size: 19,
+    size: 5,
     board: [],
     turn: BLACK,
     human: BLACK,
@@ -246,7 +248,7 @@
     state.lastWasPass = true;
     state.passes += 1;
     state.koKey = null;
-    if (state.passes >= 2) enterMarkingByPasses();
+    if (state.passes >= 2) autoFinish("양측이 패스해 종국했어요.");
   }
 
   function resign() {
@@ -255,6 +257,29 @@
     state.resigned = state.turn;
     state.result = scoreBoard();
     state.resultDismissed = false;
+    render();
+  }
+
+  // 승부가 압도적으로 갈리면 AI가 자기 차례에 기권해 대국을 끝낸다(캐주얼 UX).
+  // 추정 점수(scoreBoard)는 중반엔 노이즈가 있어 임계값을 크게(판 크기 비례) 두어
+  // "정말 갈렸을 때"만 발동시킨다.
+  function aiShouldResign() {
+    if (state.moveNumber < state.size * 2) return false; // 초반엔 추정이 불안정
+    const s = scoreBoard();
+    const aiScore = state.ai === BLACK ? s.black : s.white;
+    const oppScore = state.ai === BLACK ? s.white : s.black;
+    const behindBy = oppScore - aiScore;
+    const threshold = Math.max(18, state.size * state.size * 0.22);
+    return behindBy >= threshold;
+  }
+
+  function aiResign() {
+    state.ended = true;
+    state.resigned = state.ai;
+    state.result = scoreBoard();
+    state.resultDismissed = false;
+    state.thinking = false;
+    state.aiProposing = false;
     render();
   }
 
@@ -325,12 +350,23 @@
   }
 
   function scoreBoard() {
+    // 죽은 돌(state.deadStones)은 빈 점으로 쳐 영역을 계산하고, 상대 포로에 가산한다.
+    const dead = state.deadStones || new Set();
+    const at = (x, y) => (dead.has(`${x},${y}`) ? EMPTY : state.board[y][x]);
+    let deadBlack = 0;
+    let deadWhite = 0;
+    for (const key of dead) {
+      const [sx, sy] = key.split(",").map(Number);
+      if (state.board[sy][sx] === BLACK) deadBlack += 1;
+      else if (state.board[sy][sx] === WHITE) deadWhite += 1;
+    }
+
     const visited = new Set();
     const territory = { 1: 0, 2: 0 };
 
     for (let y = 0; y < state.size; y += 1) {
       for (let x = 0; x < state.size; x += 1) {
-        if (state.board[y][x] !== EMPTY || visited.has(`${x},${y}`)) continue;
+        if (at(x, y) !== EMPTY || visited.has(`${x},${y}`)) continue;
         const region = [];
         const borders = new Set();
         const stack = [[x, y]];
@@ -339,7 +375,7 @@
           const [cx, cy] = stack.pop();
           region.push([cx, cy]);
           for (const [nx, ny] of neighbors(cx, cy)) {
-            const value = state.board[ny][nx];
+            const value = at(nx, ny);
             if (value === EMPTY) {
               const key = `${nx},${ny}`;
               if (!visited.has(key)) {
@@ -355,10 +391,15 @@
       }
     }
 
-    const black = territory[BLACK] + state.captures[BLACK];
-    const white = territory[WHITE] + state.captures[WHITE] + KOMI;
+    const prisoners = {
+      [BLACK]: state.captures[BLACK] + deadWhite,
+      [WHITE]: state.captures[WHITE] + deadBlack,
+    };
+    const black = territory[BLACK] + prisoners[BLACK];
+    const white = territory[WHITE] + prisoners[WHITE] + komiFor(state.size);
     return {
       territory,
+      prisoners,
       black,
       white,
       winner: black > white ? BLACK : WHITE,
@@ -366,11 +407,74 @@
     };
   }
 
-  function enterMarkingByPasses() {
-    state.phase = "marking";
-    state.deadStones = new Set();
+  // 끝난 판에서 죽은 돌을 추정한다. 완벽하진 않으니(세키·옥집 등은 예외) 사람이 탭으로 보정한다.
+  // 규칙: 한 그룹이 자기 색으로만 둘러싸인 빈 영역(=눈/집)을 2곳 이상 끼고 있거나,
+  // 그런 영역 한 곳이라도 6집 이상이면 산 것으로 보고, 그 외에는 죽은 것으로 본다.
+  function detectDeadStones(board) {
+    const size = board.length;
+
+    // 1) 빈 영역마다 "그 영역에 닿는 돌 색이 한 가지뿐인지(soleColor)"와 크기를 구한다.
+    const regionOf = new Map();
+    const regions = [];
+    const seen = new Set();
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        if (board[y][x] !== EMPTY || seen.has(`${x},${y}`)) continue;
+        const cells = [];
+        const borders = new Set();
+        const stack = [[x, y]];
+        seen.add(`${x},${y}`);
+        while (stack.length) {
+          const [cx, cy] = stack.pop();
+          cells.push([cx, cy]);
+          for (const [nx, ny] of neighbors(cx, cy, size)) {
+            const v = board[ny][nx];
+            if (v === EMPTY) {
+              const k = `${nx},${ny}`;
+              if (!seen.has(k)) { seen.add(k); stack.push([nx, ny]); }
+            } else borders.add(v);
+          }
+        }
+        const idx = regions.length;
+        regions.push({ soleColor: borders.size === 1 ? [...borders][0] : 0, size: cells.length });
+        for (const [cx, cy] of cells) regionOf.set(`${cx},${cy}`, idx);
+      }
+    }
+
+    // 2) 각 그룹이 자기 색 전용 눈 영역을 몇 곳 끼고 있는지로 삶/죽음을 판정한다.
+    const dead = new Set();
+    const processed = new Set();
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const color = board[y][x];
+        if (!color || processed.has(`${x},${y}`)) continue;
+        const group = getGroup(board, x, y);
+        for (const [sx, sy] of group.stones) processed.add(`${sx},${sy}`);
+
+        const eyeIds = new Set();
+        for (const lib of group.liberties) {
+          const idx = regionOf.get(lib);
+          if (idx !== undefined && regions[idx].soleColor === color) eyeIds.add(idx);
+        }
+        let alive = eyeIds.size >= 2;
+        if (!alive && eyeIds.size === 1 && regions[[...eyeIds][0]].size >= 6) alive = true;
+        if (!alive) for (const [sx, sy] of group.stones) dead.add(`${sx},${sy}`);
+      }
+    }
+    return dead;
+  }
+
+  // 종국: 죽은 돌을 자동 추정해 곧장 채점·결과까지 간다(마킹 관문 없음).
+  // 판정이 이상하면 결과 화면에서 [더 두기]로 이어 두거나 [판정 고치기]로 보정한다.
+  function autoFinish(notice) {
+    if (state.ended || state.phase !== "play") return;
     state.aiProposing = false;
-    state.endingNotice = "양측이 패스해서 종국에 도달했어요. 죽은 돌을 탭해 표시한 뒤 채점하세요.";
+    state.deadStones = detectDeadStones(state.board);
+    state.phase = "ended";
+    state.ended = true;
+    state.result = scoreBoard();
+    state.resultDismissed = false;
+    state.endingNotice = notice || "";
   }
 
   function chooseMove() {
@@ -487,6 +591,7 @@
   }
 
   function starPoints(size) {
+    if (size === 5) return [[2,2]];
     if (size === 9) return [[2,2], [6,2], [4,4], [2,6], [6,6]];
     if (size === 13) return [[3,3], [9,3], [6,6], [3,9], [9,9]];
     return [[3,3],[9,3],[15,3],[3,9],[9,9],[15,9],[3,15],[9,15],[15,15]];
@@ -566,10 +671,17 @@
       render();
       return;
     }
-    state.phase = "marking";
-    state.deadStones = new Set();
-    state.aiProposing = false;
-    state.endingNotice = "죽은 돌을 탭해 표시한 뒤 채점하세요.";
+    if (aiAgreesToEnd()) {
+      autoFinish("이제 둘 곳이 거의 없어 종국했어요.");
+    } else {
+      state.endProposalCooldown = 8;
+      state.endingNotice = "AI가 아직 둘 곳이 있대요. 조금 더 둔 뒤 다시 끝내기를 눌러주세요.";
+      window.clearTimeout(proposeEnding.timer);
+      proposeEnding.timer = window.setTimeout(() => {
+        state.endingNotice = "";
+        render();
+      }, 2400);
+    }
     render();
   }
 
@@ -577,12 +689,39 @@
     if (state.moveNumber < state.size * state.size * 0.25) return false;
     const moves = legalMoves();
     if (moves.length < 4) return true;
-    let goodMoves = 0;
-    for (const [mx, my] of moves) {
-      if (evaluateMove(mx, my) > 1.5) goodMoves += 1;
-      if (goodMoves >= 3) break;
+    // 빈 칸 위치 점수(evaluateMove)는 거의 모든 자리가 높게 나와 종국 감지에 쓸 수 없다.
+    // 대신 "실제로 무언가를 해내는 수"가 남았는지로 판단한다. 그런 수가 없으면 종국 제안.
+    return !hasMeaningfulMoves(moves);
+  }
+
+  // 종국 판정용: 잡기/단수/내 돌 살리기/경계 줄이기 같은 "의미 있는 수"가 하나라도 남았는지.
+  // 빈 땅 메우기(자기 집)나 공배(dame)만 남았으면 의미 있는 수가 없는 것으로 본다.
+  function hasMeaningfulMoves(moves) {
+    const color = state.turn;
+    const opp = color === BLACK ? WHITE : BLACK;
+    for (const [x, y] of moves) {
+      const next = cloneBoard(state.board);
+      next[y][x] = color;
+      // ① 상대 돌을 잡거나 단수로 모는 수
+      for (const [nx, ny] of neighbors(x, y)) {
+        if (next[ny][nx] === opp && getGroup(next, nx, ny).liberties.size <= 1) return true;
+      }
+      // ② 단수에 몰린 내 돌을 살리는 수(놓은 뒤 활로가 2개 이상으로 늘어나면 구제로 본다)
+      for (const [nx, ny] of neighbors(x, y)) {
+        if (state.board[ny][nx] === color
+          && getGroup(state.board, nx, ny).liberties.size === 1
+          && getGroup(next, x, y).liberties.size > 1) return true;
+      }
+      // ③ 상대와 맞닿아 있으면서 빈 공간을 낀 경계 다툼(침투·삭감)
+      let touchesOpp = false;
+      let openSpace = false;
+      for (const [nx, ny] of neighbors(x, y)) {
+        if (state.board[ny][nx] === opp) touchesOpp = true;
+        else if (state.board[ny][nx] === EMPTY) openSpace = true;
+      }
+      if (touchesOpp && openSpace) return true;
     }
-    return goodMoves < 3;
+    return false;
   }
 
   function toggleDeadGroup(x, y) {
@@ -608,27 +747,37 @@
     render();
   }
 
+  // 마킹 보정 후 재채점. 보드는 건드리지 않고 죽은 돌 표시(state.deadStones)만 반영한다.
   function confirmMarking() {
-    const next = cloneBoard(state.board);
-    let blackCaptured = 0;
-    let whiteCaptured = 0;
-    for (const key of state.deadStones) {
-      const [sx, sy] = key.split(",").map(Number);
-      const color = next[sy][sx];
-      if (!color) continue;
-      next[sy][sx] = EMPTY;
-      if (color === BLACK) whiteCaptured += 1;
-      else blackCaptured += 1;
-    }
-    state.board = next;
-    state.captures[BLACK] += blackCaptured;
-    state.captures[WHITE] += whiteCaptured;
-    state.deadStones = new Set();
     state.phase = "ended";
     state.ended = true;
     state.result = scoreBoard();
     state.resultDismissed = false;
     state.endingNotice = "";
+    render();
+  }
+
+  // 결과 화면 [더 두기]: 종국을 취소하고 그대로 이어서 둔다(COSUMI식 분쟁 해결).
+  function resumePlay() {
+    state.phase = "play";
+    state.ended = false;
+    state.resigned = null;
+    state.result = null;
+    state.resultDismissed = false;
+    state.deadStones = new Set();
+    state.passes = 0;
+    state.endProposalCooldown = 8;
+    state.endingNotice = "이어서 둘게요.";
+    render();
+  }
+
+  // 결과 화면 [판정 고치기]: 죽은 돌 표시를 탭으로 보정하는 마킹 단계로(자동 추정 유지).
+  function reopenMarking() {
+    state.phase = "marking";
+    state.ended = false;
+    state.result = null;
+    state.resultDismissed = false;
+    state.endingNotice = "죽은 돌을 탭해서 고친 뒤 [채점하기]를 누르세요.";
     render();
   }
 
@@ -638,6 +787,7 @@
     render();
     const delay = state.difficulty === "easy" ? 360 : state.difficulty === "medium" ? 720 : 1100;
     window.setTimeout(() => {
+      if (aiShouldResign()) { aiResign(); return; }
       const move = chooseMove();
       if (move) place(move[0], move[1]);
       else pass();
@@ -795,7 +945,7 @@
     if (state.lastEvent && state.lastEvent.startsWith("capture:")) {
       const [, color, count] = state.lastEvent.split(":");
       const me = Number(color) === state.human;
-      const ico = me ? "icons/party-popper.svg" : "icons/circle-alert.svg";
+      const ico = me ? "icons/party-popper.svg" : "icons/triangle-alert.svg";
       const text = me
         ? `잡았어요! 돌 ${count}개 획득. 이 흐름을 이어가요.`
         : `${count}개를 잡혔어요. 한 발 물러서서 다시 정비해요.`;
@@ -843,50 +993,43 @@
     `;
   }
 
+  const START_PRESETS = [
+    { size: 5,  difficulty: "easy",   label: "입문", spec: "5 × 5",   time: "약 1분" },
+    { size: 9,  difficulty: "medium", label: "보통", spec: "9 × 9",   time: "약 5분" },
+    { size: 19, difficulty: "hard",   label: "정식", spec: "19 × 19", time: "약 20분" },
+  ];
+
   function startView() {
+    const current = START_PRESETS.find((p) => p.size === state.size) || START_PRESETS[0];
+    const presets = START_PRESETS.map((p) => `
+      <button class="seg-preset ${state.size === p.size ? "selected" : ""}" data-setting="preset" data-value="${p.size}">
+        <b>${p.label}</b><small>${p.spec}</small>
+      </button>`).join("");
     return `
-      <section class="start-view" aria-label="대국 시작 화면">
-        <div class="start-preview" aria-hidden="true">
-          <div class="mini-board">
-            ${Array.from({ length: 7 }, (_, i) => `<span class="mini-row" style="top:${((i + 0.5) / 7) * 100}%"></span>`).join("")}
-            ${Array.from({ length: 7 }, (_, i) => `<span class="mini-col" style="left:${((i + 0.5) / 7) * 100}%"></span>`).join("")}
-            <span class="mini-stone mini-black" style="left:35.7%;top:50%"></span>
-            <span class="mini-stone mini-white" style="left:50%;top:35.7%"></span>
-            <span class="mini-stone mini-black" style="left:50%;top:64.3%"></span>
-            <span class="mini-stone mini-white" style="left:64.3%;top:50%"></span>
-            <span class="mini-stone mini-black" style="left:78.6%;top:78.6%"></span>
+      <section class="start-view simple" aria-label="대국 시작 화면">
+        <div class="start-hero-block">
+          <div class="game-emblem" aria-hidden="true">
+            <span class="emblem-stone black"></span>
+            <span class="emblem-stone white"></span>
           </div>
+          <h1 class="game-title">바둑</h1>
+          <p class="game-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
         </div>
-        <div class="start-hero">
-          <div class="start-kicker">Baduk · 圍棋</div>
-          <h1>오늘의 한 판</h1>
-          <p>판 크기, 내 색, AI 강도만 정하면 바로 시작합니다.</p>
-          <button class="learn-link" data-tutorial-open>${icon("bulb")} 처음이면 규칙 먼저 보기</button>
-        </div>
-        <div class="start-section">
-          <div class="start-section-head"><h3>판 크기</h3><span>짧게 연습하거나 정식으로 두기</span></div>
-          <div class="start-grid two">
-            ${sizeOption(9)}
-            ${sizeOption(19)}
+        <div class="start-controls">
+          <div class="seg-presets" role="group" aria-label="난이도와 판 크기">
+            ${presets}
           </div>
-        </div>
-        <div class="start-section">
-          <div class="start-section-head"><h3>내 색</h3><span>흑이 먼저 둡니다</span></div>
-          <div class="start-grid two">
-            ${colorOption(BLACK)}
-            ${colorOption(WHITE)}
+          <div class="seg-presets seg-colors" role="group" aria-label="내 색">
+            <button class="seg-preset ${state.human === BLACK ? "selected" : ""}" data-setting="human" data-value="${BLACK}">
+              <span class="seg-stone black"></span><b>흑</b><small>내가 먼저</small>
+            </button>
+            <button class="seg-preset ${state.human === WHITE ? "selected" : ""}" data-setting="human" data-value="${WHITE}">
+              <span class="seg-stone white"></span><b>백</b><small>AI가 먼저</small>
+            </button>
           </div>
-        </div>
-        <div class="start-section">
-          <div class="start-section-head"><h3>AI 강도</h3><span>초급부터 시작해도 좋아요</span></div>
-          <div class="start-stack">
-            ${difficultyOption("easy")}
-            ${difficultyOption("medium")}
-            ${difficultyOption("hard")}
-          </div>
-        </div>
-        <div class="start-cta-wrap">
+          <p class="start-meta">AI ${DIFFICULTY_COPY[current.difficulty].title} · 한 판에 ${current.time}</p>
           <button class="start-cta" data-start>${icon("play")} 대국 시작</button>
+          <button class="start-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
         </div>
       </section>
     `;
@@ -959,14 +1102,14 @@
       : timeout
         ? `${winner === BLACK ? "흑" : "백"} 시간승`
         : `${winner === BLACK ? "흑" : "백"} ${result.margin.toFixed(1)}집 승`;
-    const headlineIcon = humanWon ? "icons/party-popper.svg" : "icons/hand-heart.svg";
+    const headlineIcon = humanWon ? "icons/party-popper.svg" : "icons/hand-shake.svg";
     const headlineText = humanWon ? "축하해요, 이겼어요!" : "좋은 한 판이었어요";
     const headline = `<span class="tone-${humanWon ? "gold" : "blue"}">${lucide(headlineIcon)}</span> ${headlineText}`;
     const body = resigned
       ? (resigned === state.human ? "기권하셨어요. 다음 판에서 다시 만나요." : "AI가 기권했어요!")
       : timeout
         ? (timeout === state.human ? "제한 시간이 끝났어요." : "AI 제한 시간이 끝났어요!")
-        : `영역 + 포로 + 백 덤 ${KOMI}집 합산.`;
+        : `영역 + 포로 + 백 덤 ${komiFor(state.size)}집 합산.`;
     const tBlack = result.territory ? result.territory[BLACK] : 0;
     const tWhite = result.territory ? result.territory[WHITE] : 0;
     return `
@@ -980,14 +1123,20 @@
             <div class="score-box ${winner === BLACK ? "winner" : ""}">
               <div class="score-name">${chip(BLACK, 14)} 흑</div>
               <div class="score-total">${result.black.toFixed(1)}</div>
-              <div class="score-detail">집 ${tBlack} · 포로 ${state.captures[BLACK]}</div>
+              <div class="score-detail">집 ${tBlack} · 포로 ${result.prisoners ? result.prisoners[BLACK] : state.captures[BLACK]}</div>
             </div>
             <div class="score-box ${winner === WHITE ? "winner" : ""}">
               <div class="score-name">${chip(WHITE, 14)} 백</div>
               <div class="score-total">${result.white.toFixed(1)}</div>
-              <div class="score-detail">집 ${tWhite} · 포로 ${state.captures[WHITE]} · 덤 ${KOMI}</div>
+              <div class="score-detail">집 ${tWhite} · 포로 ${result.prisoners ? result.prisoners[WHITE] : state.captures[WHITE]} · 덤 ${komiFor(state.size)}</div>
             </div>
           </div>
+          ${!resigned && !timeout ? `
+          <div class="result-redo">
+            <span>결과가 이상한가요?</span>
+            <button class="btn" data-fix-dead>판정 고치기</button>
+            <button class="btn" data-resume-play>더 두기</button>
+          </div>` : ""}
           <div class="modal-actions">
             <button class="btn" data-close-result>판 살펴보기</button>
             <button class="btn primary icon" data-rematch>${icon("refresh")} 다시 한 판</button>
@@ -1234,7 +1383,7 @@
         </div>
         <div class="live-score-foot">
           <span>${chip(BLACK, 10)} ${s.black.toFixed(0)}</span>
-          <span>${chip(WHITE, 10)} ${s.white.toFixed(1)} <small>(덤 ${KOMI})</small></span>
+          <span>${chip(WHITE, 10)} ${s.white.toFixed(1)} <small>(덤 ${komiFor(state.size)})</small></span>
         </div>
       </div>
     `;
@@ -1246,7 +1395,7 @@
       return `
         <div class="ending-banner marking">
           <span class="ending-banner-title">${icon("end")} 종국 채점 단계</span>
-          <span class="ending-banner-body">죽은 돌을 탭해 표시한 뒤, 아래 파란 <b>채점하기</b> 버튼을 누르세요. ${deadCount ? `(현재 ${deadCount}개 표시됨)` : ""}</span>
+          <span class="ending-banner-body">${deadCount ? `AI가 죽은 돌 ${deadCount}개를 표시했어요(빨강).` : "죽은 돌이 없다고 봤어요."} 틀린 곳은 탭해서 고친 뒤, 아래 파란 <b>채점하기</b> 버튼을 누르세요.</span>
         </div>
       `;
     }
@@ -1385,7 +1534,7 @@
       return;
     }
     const node = target.closest(
-      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-setting],[data-toggle],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close]"
+      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-toggle],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close]"
     );
     if (!node || node.disabled) return;
     const ds = node.dataset;
@@ -1416,6 +1565,8 @@
       info = { name: "confirm-cancel" };
     } else if ("confirmOk" in ds) info = { name: "confirm-ok" };
     else if ("closeResult" in ds) info = { name: "close-result" };
+    else if ("resumePlay" in ds) info = { name: "resume-play" };
+    else if ("fixDead" in ds) info = { name: "fix-dead" };
     else if ("closeModal" in ds) {
       if (target.closest(".modal") && !target.matches("[data-close-result]")) return;
       info = { name: "close-modal" };
@@ -1441,13 +1592,12 @@
     if (name === "mark-cancel") { cancelMarking(); return; }
     if (name === "mark-confirm") { confirmMarking(); return; }
     if (name === "ai-end-accept") {
-      state.aiProposing = false;
-      state.endingNotice = "AI도 동의했어요. 죽은 돌을 탭해 표시하고 채점하세요.";
-      state.phase = "marking";
-      state.deadStones = new Set();
+      autoFinish("종국에 합의했어요.");
       render();
       return;
     }
+    if (name === "resume-play") { resumePlay(); return; }
+    if (name === "fix-dead") { reopenMarking(); return; }
     if (name === "ai-end-decline") {
       state.aiProposing = false;
       state.endProposalCooldown = 8;
@@ -1540,6 +1690,27 @@
           } else {
             newGame({ size: state.size, started: false, mobileStarted: false });
           }
+        }
+      } else if (key === "preset") {
+        const preset = START_PRESETS.find((p) => p.size === Number(value)) || START_PRESETS[0];
+        const apply = () => {
+          newGame({
+            size: preset.size,
+            difficulty: preset.difficulty,
+            human: state.human,
+            started: state.started,
+            mobileStarted: state.started,
+          });
+        };
+        if (state.started && state.moveNumber > 0 && !state.ended) {
+          askConfirm({
+            title: "난이도를 바꿀까요?",
+            body: "지금까지의 대국이 사라지고 새 판으로 시작해요.",
+            confirm: "바꾸고 새로 시작",
+            onConfirm: apply,
+          });
+        } else {
+          apply();
         }
       } else if (key === "difficulty") {
         state.difficulty = value;
@@ -1643,6 +1814,6 @@
     state.resultDismissed = false;
   }
 
-  newGame({ human: BLACK, difficulty: "easy", started: false, mobileStarted: false });
+  newGame({ human: BLACK, size: 9, difficulty: "easy", started: false, mobileStarted: false });
   startTimerLoop();
 })();
