@@ -1077,15 +1077,6 @@
     `;
   }
 
-  function toggle(label, key, on) {
-    return `
-      <div class="toggle-row">
-        <span>${label}</span>
-        <button class="toggle ${on ? "on" : ""}" data-toggle="${key}" aria-label="${label}"><i></i></button>
-      </div>
-    `;
-  }
-
   function resultModal() {
     if (!state.ended || state.resultDismissed) return "";
     const result = state.result || scoreBoard();
@@ -1098,13 +1089,12 @@
         : result.winner;
     const humanWon = winner === state.human;
     const title = resigned
-      ? `${winner === BLACK ? "흑" : "백"} 승리 (기권)`
+      ? `${winner === BLACK ? "흑" : "백"} 승리`
       : timeout
         ? `${winner === BLACK ? "흑" : "백"} 시간승`
         : `${winner === BLACK ? "흑" : "백"} ${result.margin.toFixed(1)}집 승`;
     const headlineIcon = humanWon ? "icons/party-popper.svg" : "icons/hand-shake.svg";
-    const headlineText = humanWon ? "축하해요, 이겼어요!" : "좋은 한 판이었어요";
-    const headline = `<span class="tone-${humanWon ? "gold" : "blue"}">${lucide(headlineIcon)}</span> ${headlineText}`;
+    const headline = `<span class="tone-${humanWon ? "gold" : "blue"}">${lucide(headlineIcon)}</span>`;
     const body = resigned
       ? (resigned === state.human ? "기권하셨어요. 다음 판에서 다시 만나요." : "AI가 기권했어요!")
       : timeout
@@ -1115,7 +1105,6 @@
     return `
       <div class="modal-scrim" data-close-modal>
         <div class="modal result" role="dialog" aria-modal="true" aria-labelledby="result-title">
-          <div class="result-trophy">${chip(winner, 58)}</div>
           <div class="result-headline">${headline}</div>
           <h2 id="result-title">${title}</h2>
           <p class="muted">${body}</p>
@@ -1170,29 +1159,36 @@
       <div class="sheet-scrim" data-sheet-close>
         <div class="sheet" role="dialog" aria-modal="true">
           <div class="sheet-handle"></div>
-          <div class="sheet-head"><h3>대국 메뉴</h3></div>
-          <div class="sheet-grid">
-            <button class="sheet-action primary" data-propose-end ${state.ended || state.phase !== "play" || state.thinking ? "disabled" : ""}>
-              ${icon("end")}<b>끝내기 제안</b><small>AI에게 종국 제안</small>
-            </button>
-            <button class="sheet-action" data-hint ${hintLeft && !state.ended && state.turn === state.human && !state.thinking && state.phase === "play" ? "" : "disabled"}>
-              <span class="sheet-icon tone-blue">${lucide("icons/lightbulb.svg")}</span><b>힌트</b><small>${hintLeft}회 남음</small>
-            </button>
-            <button class="sheet-action" data-undo ${state.history.length && state.phase === "play" ? "" : "disabled"}>
-              ${icon("undo")}<b>되돌리기</b><small>한 수 취소</small>
-            </button>
-            <button class="sheet-action" data-pass ${state.ended || state.thinking || state.turn !== state.human || state.phase !== "play" ? "disabled" : ""}>
-              ${icon("pass")}<b>패스</b><small>한 수 건너뛰기</small>
-            </button>
-            <button class="sheet-action danger" data-resign ${state.ended || state.phase !== "play" ? "disabled" : ""}>
-              ${icon("flag")}<b>기권</b><small>이번 판 포기</small>
-            </button>
+          <div class="sheet-titlebar">
+            <h3 class="sheet-title">대국 메뉴</h3>
+            <button class="sheet-close" data-sheet-close aria-label="닫기">${icon("x")}</button>
           </div>
-          <div class="sheet-section">
-            <h4>표시</h4>
-            ${seg("보드", "theme", state.theme, [["wood","나무"],["paper","종이"],["dark","다크"]])}
-            ${toggle("좌표 표시", "coords", state.showCoords)}
-            ${toggle("마지막 수 표시", "last", state.showLast)}
+          <div class="sheet-scroll-wrap">
+            <div class="sheet-scroll">
+              <div class="sheet-grid">
+                <button class="sheet-action primary" data-propose-end ${state.ended || state.phase !== "play" || state.thinking ? "disabled" : ""}>
+                  ${icon("end")}<b>끝내기 제안</b><small>AI에게 종국 제안</small>
+                </button>
+                <button class="sheet-action" data-hint ${hintLeft && !state.ended && state.turn === state.human && !state.thinking && state.phase === "play" ? "" : "disabled"}>
+                  <span class="sheet-icon tone-blue">${lucide("icons/lightbulb.svg")}</span><b>힌트</b><small>${hintLeft}회 남음</small>
+                </button>
+                <button class="sheet-action" data-undo ${state.history.length && state.phase === "play" ? "" : "disabled"}>
+                  ${icon("undo")}<b>되돌리기</b><small>한 수 취소</small>
+                </button>
+                <button class="sheet-action" data-pass ${state.ended || state.thinking || state.turn !== state.human || state.phase !== "play" ? "disabled" : ""}>
+                  ${icon("pass")}<b>패스</b><small>한 수 건너뛰기</small>
+                </button>
+                <button class="sheet-action danger" data-resign ${state.ended || state.phase !== "play" ? "disabled" : ""}>
+                  ${icon("flag")}<b>기권</b><small>이번 판 포기</small>
+                </button>
+              </div>
+              <div class="sheet-section">
+                <h4>표시</h4>
+                ${seg("보드", "theme", state.theme, [["wood","나무"],["paper","종이"],["dark","다크"]])}
+              </div>
+            </div>
+            <div class="sheet-grad top" aria-hidden="true"></div>
+            <div class="sheet-grad bottom" aria-hidden="true"></div>
           </div>
           <button class="sheet-cta" data-rematch>${icon("refresh")} 새 대국 시작</button>
         </div>
@@ -1517,6 +1513,15 @@
       </div>
     `;
     bind();
+    updateSheetGrad();
+  }
+
+  function updateSheetGrad() {
+    const wrap = app.querySelector(".sheet-scroll-wrap");
+    if (!wrap) return;
+    const sc = wrap.querySelector(".sheet-scroll");
+    wrap.classList.toggle("can-up", sc.scrollTop > 1);
+    wrap.classList.toggle("can-down", sc.scrollTop + sc.clientHeight < sc.scrollHeight - 1);
   }
 
   function bind() {
@@ -1524,6 +1529,10 @@
     bind.attached = true;
     app.addEventListener("click", onAppClick);
     app.addEventListener("input", onAppInput);
+    // Scroll doesn't bubble, so listen in the capture phase — survives full re-renders.
+    app.addEventListener("scroll", (e) => {
+      if (e.target.classList && e.target.classList.contains("sheet-scroll")) updateSheetGrad();
+    }, true);
   }
 
   function onAppClick(event) {
@@ -1534,13 +1543,12 @@
       return;
     }
     const node = target.closest(
-      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-toggle],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close]"
+      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close]"
     );
     if (!node || node.disabled) return;
     const ds = node.dataset;
     let info = null;
     if (ds.setting !== undefined) info = { name: "setting", value: ds.value, key: ds.setting };
-    else if (ds.toggle !== undefined) info = { name: "toggle", value: ds.toggle };
     else if ("undo" in ds) info = { name: "undo" };
     else if ("pass" in ds) info = { name: "pass" };
     else if ("resign" in ds) info = { name: "resign" };
@@ -1558,7 +1566,9 @@
     else if ("tutorialClose" in ds) info = { name: "tutorial-close" };
     else if ("sheetOpen" in ds) info = { name: "sheet-open" };
     else if ("sheetClose" in ds) {
-      if (target.closest(".sheet") && !target.matches("[data-sheet-close]")) return;
+      // Close only from the scrim backdrop or an explicit close control (X button);
+      // ignore clicks bubbling up from the sheet interior.
+      if (node.classList.contains("sheet-scrim") && target.closest(".sheet")) return;
       info = { name: "sheet-close" };
     } else if ("confirmCancel" in ds) {
       if (target.closest(".modal") && !target.matches("[data-confirm-cancel]")) return;
@@ -1720,11 +1730,6 @@
         render();
       }
       return;
-    }
-    if (name === "toggle") {
-      if (value === "coords") state.showCoords = !state.showCoords;
-      if (value === "last") state.showLast = !state.showLast;
-      render();
     }
   }
 
