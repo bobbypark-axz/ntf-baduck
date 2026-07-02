@@ -1182,10 +1182,6 @@
                   ${icon("flag")}<b>기권</b><small>이번 판 포기</small>
                 </button>
               </div>
-              <div class="sheet-section">
-                <h4>표시</h4>
-                ${seg("보드", "theme", state.theme, [["wood","나무"],["paper","종이"],["dark","다크"]])}
-              </div>
             </div>
             <div class="sheet-grad top" aria-hidden="true"></div>
             <div class="sheet-grad bottom" aria-hidden="true"></div>
@@ -1724,9 +1720,6 @@
         }
       } else if (key === "difficulty") {
         state.difficulty = value;
-        render();
-      } else if (key === "theme") {
-        state.theme = value;
         render();
       }
       return;

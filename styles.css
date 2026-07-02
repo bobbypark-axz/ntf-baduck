@@ -1488,18 +1488,6 @@ input.name-input:focus {
 .sheet-action.danger { color: var(--red); }
 .sheet-action.danger svg { color: var(--red); }
 .sheet-action:active:not(:disabled) { background: var(--panel-soft); }
-.sheet-section {
-  border-top: 1px solid var(--line-soft);
-  padding-top: 14px;
-}
-.sheet-section h4 {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  margin-bottom: 10px;
-}
 .sheet-cta {
   flex: 0 0 auto;
   width: 100%;
