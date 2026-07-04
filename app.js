@@ -486,17 +486,114 @@
       return pool[Math.floor(Math.random() * pool.length)];
     }
 
-    let best = null;
-    let bestScore = -Infinity;
     const sample = state.difficulty === "hard" ? moves : moves.filter((_, i) => i % 2 === 0 || moves.length < 120);
-    for (const move of sample) {
-      const score = evaluateMove(move[0], move[1]) + Math.random() * 0.25;
-      if (score > bestScore) {
-        bestScore = score;
+    const scored = sample.map((move) => [evaluateMove(move[0], move[1]) + Math.random() * 0.25, move]);
+    scored.sort((a, b) => b[0] - a[0]);
+    if (state.difficulty !== "hard") {
+      return scored[0][0] < -8 ? null : scored[0][1];
+    }
+
+    // 고급: 1차 점수 상위 후보만 골라 "상대가 최선으로 응수하면?"까지 한 수 더 읽는다.
+    const opp = state.turn === BLACK ? WHITE : BLACK;
+    let best = scored[0][1];
+    let bestDeep = -Infinity;
+    for (const [base, move] of scored.slice(0, 10)) {
+      const sim = applySim(state.board, move[0], move[1], state.turn);
+      if (!sim) continue;
+      const deep = base - bestReplyScore(sim.board, opp) * 0.75 + ladderPenalty(sim.board, move[0], move[1]);
+      if (deep > bestDeep) {
+        bestDeep = deep;
         best = move;
       }
     }
-    return bestScore < -8 ? null : best;
+    // 패스 여부는 응수 감점이 섞이지 않은 1차 점수로 판단(상대가 유리하다고 패스하면 안 되므로)
+    return scored[0][0] < -8 ? null : best;
+  }
+
+  // 가상 착수: 잡히는 상대 돌을 들어낸 보드를 돌려준다. 자살수면 null.
+  function applySim(board, x, y, color) {
+    if (board[y][x] !== EMPTY) return null;
+    const size = board.length;
+    const opp = color === BLACK ? WHITE : BLACK;
+    const next = cloneBoard(board);
+    next[y][x] = color;
+    let captured = 0;
+    for (const [nx, ny] of neighbors(x, y, size)) {
+      if (next[ny][nx] !== opp) continue;
+      const group = getGroup(next, nx, ny);
+      if (group.liberties.size === 0) {
+        captured += group.stones.length;
+        for (const [sx, sy] of group.stones) next[sy][sx] = EMPTY;
+      }
+    }
+    if (getGroup(next, x, y).liberties.size === 0) return null;
+    return { board: next, captured };
+  }
+
+  // 상대(color)가 다음 한 수로 얻는 최대 전술 이득(잡기/단수) 근사치.
+  // 잡기·단수는 반드시 돌 옆에서만 생기므로 돌과 붙은 빈 점만 훑는다.
+  function bestReplyScore(board, color) {
+    const size = board.length;
+    const me = color === BLACK ? WHITE : BLACK;
+    let best = 0;
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        if (board[y][x] !== EMPTY) continue;
+        if (!neighbors(x, y, size).some(([nx, ny]) => board[ny][nx] !== EMPTY)) continue;
+        const sim = applySim(board, x, y, color);
+        if (!sim) continue;
+        let gain = sim.captured * 16;
+        for (const [nx, ny] of neighbors(x, y, size)) {
+          if (sim.board[ny][nx] === me && getGroup(sim.board, nx, ny).liberties.size === 1) gain += 5;
+        }
+        if (getGroup(sim.board, x, y).liberties.size <= 1) gain -= 12;
+        if (gain > best) best = gain;
+      }
+    }
+    return best;
+  }
+
+  // 방금 둔 돌의 그룹이 활로 2개짜리이고 축(사다리)으로 끝까지 잡히는 자리면 감점.
+  function ladderPenalty(board, x, y) {
+    const color = board[y][x];
+    const opp = color === BLACK ? WHITE : BLACK;
+    const own = getGroup(board, x, y);
+    if (own.liberties.size !== 2) return 0;
+    for (const key of own.liberties) {
+      const [ax, ay] = key.split(",").map(Number);
+      const chase = applySim(board, ax, ay, opp);
+      if (!chase) continue;
+      if (getGroup(chase.board, ax, ay).liberties.size <= 1) continue;
+      if (getGroup(chase.board, x, y).liberties.size === 1 && ladderCaptured(chase.board, x, y, 0)) {
+        // 축이면 그룹 전체가 잡힌 것과 같으므로 잡기 점수 스케일로 감점
+        return -(6 + own.stones.length * 12);
+      }
+    }
+    return 0;
+  }
+
+  // 축 읽기: 단수에 몰린 (gx,gy) 그룹이 도망쳐도 결국 잡히면 true.
+  function ladderCaptured(board, gx, gy, depth) {
+    if (depth > 40) return false;
+    const color = board[gy][gx];
+    const opp = color === BLACK ? WHITE : BLACK;
+    const group = getGroup(board, gx, gy);
+    if (group.liberties.size === 0) return true;
+    if (group.liberties.size >= 2) return false;
+    const [lx, ly] = [...group.liberties][0].split(",").map(Number);
+    const run = applySim(board, lx, ly, color);
+    if (!run) return true;
+    const after = getGroup(run.board, lx, ly);
+    if (after.liberties.size >= 3 || (run.captured > 0 && after.liberties.size >= 2)) return false;
+    if (after.liberties.size <= 1) return true;
+    for (const key of after.liberties) {
+      const [ax, ay] = key.split(",").map(Number);
+      const chase = applySim(run.board, ax, ay, opp);
+      if (!chase) continue;
+      if (getGroup(chase.board, ax, ay).liberties.size <= 1) continue;
+      if (getGroup(chase.board, lx, ly).liberties.size === 1 && ladderCaptured(chase.board, lx, ly, depth + 1)) return true;
+    }
+    return false;
   }
 
   function isOwnEye(x, y) {
@@ -565,29 +662,12 @@
     }
     score += starPointBonus(x, y);
 
-    if (state.difficulty === "hard") {
-      score += influenceScore(next, x, y, color) * 0.55;
-    }
-
     return score;
   }
 
   function starPointBonus(x, y) {
     const stars = starPoints(state.size);
     return stars.some(([sx, sy]) => sx === x && sy === y) && state.moveNumber < state.size ? 3 : 0;
-  }
-
-  function influenceScore(board, x, y, color) {
-    let score = 0;
-    for (let cy = Math.max(0, y - 3); cy <= Math.min(state.size - 1, y + 3); cy += 1) {
-      for (let cx = Math.max(0, x - 3); cx <= Math.min(state.size - 1, x + 3); cx += 1) {
-        const d = Math.max(Math.abs(cx - x), Math.abs(cy - y));
-        if (d === 0) continue;
-        if (board[cy][cx] === color) score += 1 / d;
-        else if (board[cy][cx]) score -= 0.7 / d;
-      }
-    }
-    return score;
   }
 
   function starPoints(size) {
