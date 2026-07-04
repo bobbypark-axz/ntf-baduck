@@ -38,7 +38,7 @@
   /* 텍스트 */
   --text: var(--black-88);
   --muted: var(--black-64);
-  --faint: var(--black-32);
+  --faint: var(--black-48); /* 보조 텍스트. 32%는 비활성(disabled) 전용 */
   /* 라인 */
   --line: var(--black-16);
   --line-soft: var(--black-8);
@@ -471,7 +471,7 @@ h2, h3, h4, p { margin: 0; }
   box-shadow: 0 0 0 3px rgba(0,191,64,.17);
 }
 .pill .dot.live { background: var(--green); box-shadow: 0 0 0 3px rgba(0,191,64,.14); }
-.pill .dot.ended { background: var(--faint); box-shadow: none; }
+.pill .dot.ended { background: var(--black-32); box-shadow: none; }
 @keyframes live-pulse {
   0%, 100% { box-shadow: 0 0 0 3px rgba(0,191,64,.17); }
   50% { box-shadow: 0 0 0 5px rgba(0,191,64,.05); }
@@ -942,7 +942,7 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 0 auto -8px;
+  margin: 0 auto; /* 음수 마진 금지 — 보드와의 사이여백은 stage gap이 담당 */
   animation: pop-in 220ms cubic-bezier(.2,.8,.3,1.1);
 }
 .ending-banner.notice {
@@ -1037,10 +1037,10 @@ h3 {
   color: var(--text-white-100);
 }
 .btn.primary:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
-.btn.neutral {                                 /* Neutral(Medium) */
+.btn.neutral {                                 /* Neutral(Medium) — 팝업 세컨더리 (Figma 1133:1566) */
   background: var(--btn-neutral-bg);
   border-color: transparent;
-  color: var(--text-88);
+  color: var(--black-72);
 }
 .btn.danger { color: var(--btn-danger); }
 .btn.danger:hover:not(:disabled) { background: var(--red-soft); }
@@ -1330,6 +1330,12 @@ input.name-input:focus {
   justify-content: center;
   gap: 8px;
 }
+/* 팝업 버튼 가이드(Figma 1133:808·1133:1566): h48 · Bold 16 · 가로 균등 분할 */
+.modal-actions .btn {
+  flex: 1;
+  min-height: 48px;
+  font-size: 16px;
+}
 /* 종국 결과 화면의 보정 줄 — "결과가 이상한가요? [판정 고치기] [더 두기]" */
 .result-redo {
   display: flex;
@@ -1345,10 +1351,11 @@ input.name-input:focus {
   color: var(--muted);
 }
 .result-redo .btn { min-height: 34px; padding: 0 12px; font-size: 14px; }
+.modal.confirm { width: 280px; max-width: 100%; }   /* 알럿형 팝업: 280 고정 · 센터 (scrim이 중앙 정렬) */
 .modal.confirm h2 { font: var(--font-body-1); font-weight: 700; color: var(--text-88); }   /* 타이틀 17 (Body 1 Bold) */
 .modal.confirm p { margin-top: 8px; margin-bottom: 22px; font: var(--font-body-3); color: var(--text-64); }   /* 부가정보 15 / 64% */
 .modal.confirm .modal-actions { justify-content: center; gap: 8px; }
-.modal.confirm .btn { min-width: 112px; padding: 0 18px; min-height: 44px; }
+.modal.confirm .btn { padding: 0 16px; }
 
 /* ---------------- Mobile sheet ---------------- */
 .sheet-scrim {
@@ -1844,24 +1851,25 @@ input.name-input:focus {
   color: var(--text);
   font-size: 14px;
   line-height: 1.6;
-  font-weight: 700;
+  font-weight: 400; /* 바디는 Regular, 볼드는 타이틀/강조(b)만 */
   margin: 0 0 8px;
 }
 .t-section p:last-child { margin-bottom: 0; }
 .t-section p b { font-weight: 700; }
+.t-section .muted-tiny { font-weight: 400; }
 .t-row {
   display: grid;
-  grid-template-columns: 168px 1fr;
+  grid-template-columns: 118px 1fr; /* 보드 그래픽 70% 축소 (168 → 118) */
   gap: 22px;
   align-items: center;
   margin-top: 14px;
 }
-.t-row.reverse { grid-template-columns: 1fr 168px; }
+.t-row.reverse { grid-template-columns: 1fr 118px; }
 .t-row.reverse .t-text { order: 1; }
 .t-row.reverse .t-board { order: 2; }
 .t-board {
-  width: 168px;
-  height: 168px;
+  width: 118px;
+  height: 118px;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 6px 14px -4px rgba(120,80,30,.35);
@@ -1880,7 +1888,7 @@ input.name-input:focus {
 .t-list li {
   font-size: 14px;
   line-height: 1.7;
-  font-weight: 700;
+  font-weight: 400;
 }
 .t-list li b { font-weight: 700; color: var(--blue-dark); }
 .tutorial-foot {
@@ -1931,8 +1939,8 @@ input.name-input:focus {
   .t-row.reverse .t-text { order: 2; }
   .t-row.reverse .t-board { order: 1; }
   .t-board {
-    width: min(60vw, 220px);
-    height: min(60vw, 220px);
+    width: min(42vw, 154px); /* 70% 축소 */
+    height: min(42vw, 154px);
     margin: 0 auto;
   }
   .tutorial-foot { padding: 12px 18px max(16px, env(safe-area-inset-bottom)); }
@@ -2159,6 +2167,9 @@ input.name-input:focus {
     font-size: 12px;
     padding: 6px 4px;
   }
+  /* 카드형(흰 배경) 오버라이드가 primary의 흰 글자를 덮어 '끝내기'가 안 보이던 문제 —
+     기권(danger·빨강)과 같은 방식으로 파란 글자/아이콘을 준다 */
+  .actions .btn.primary { color: var(--blue); }
   .actions .btn svg { width: 18px; height: 18px; }
   .marking-actions {
     position: sticky;
@@ -2494,7 +2505,7 @@ input.name-input:focus {
   cursor: pointer;
   transition: background .15s, box-shadow .15s;
 }
-.seg-preset b { font-size: 14px; font-weight: 700; color: var(--muted, #5b5c61); }
+.seg-preset b { font-size: 14px; font-weight: 700; color: var(--black-48); }
 .seg-preset small { font-size: 12px; color: var(--faint, #8b8c91); }
 .seg-preset.selected { background: #fff; box-shadow: 0 3px 10px -3px rgba(23,23,23,.22); }
 .seg-preset.selected b { color: var(--ink, #171719); }
@@ -2515,11 +2526,11 @@ input.name-input:focus {
 .start-view.simple .start-cta {
   width: 100%;
   min-height: 54px;
-  border-radius: 16px;
+  border-radius: var(--btn-radius); /* Box R8 (고정) */
   border: 0;
   background: var(--blue, #1e84ff);
   color: #fff;
-  font-size: 17px;
+  font-size: 16px; /* 2XL Large 버튼 폰트 */
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -2532,7 +2543,7 @@ input.name-input:focus {
 .start-secondary {
   width: 100%;
   min-height: 48px;
-  border-radius: 16px;
+  border-radius: var(--btn-radius); /* Box R8 (고정) */
   border: 1px solid var(--line, #e4e6ea);
   background: #fff;
   color: var(--ink, #171719);

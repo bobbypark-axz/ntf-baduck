@@ -932,7 +932,7 @@
       undo: '<path d="M3 7v6h6M3 13a9 9 0 1 0 3-7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
       pass: '<path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
       flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
-      refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
+      refresh: '<g transform="scale(1.5)"><path d="M8.18685 1.33317C6.26004 1.33321 4.53334 2.19897 3.35026 3.56299C3.09647 3.85563 2.86827 4.17221 2.66732 4.50765V2.33317C2.66723 1.96516 2.36864 1.66668 2.00065 1.6665C1.63252 1.6665 1.33407 1.96506 1.33399 2.33317L1.33333 6.33317C1.33333 6.70125 1.63196 6.99966 2 6.99984H6C6.36819 6.99984 6.66667 6.70136 6.66667 6.33317C6.66658 5.96516 6.36864 5.66668 6.00065 5.6665H3.55664C3.76794 5.21754 4.03884 4.80404 4.35742 4.43669C5.30332 3.34608 6.67039 2.66654 8.18685 2.6665C11.0097 2.6666 13.3339 5.03447 13.334 7.99984C13.334 10.9653 11.0097 13.3331 8.18685 13.3332C6.0901 13.3331 4.27196 12.0311 3.47136 10.1418C3.32771 9.80287 2.9366 9.64411 2.59766 9.7876C2.25867 9.93123 2.10056 10.323 2.24414 10.6619C3.23859 13.0086 5.51724 14.6664 8.18685 14.6665C11.7854 14.6664 14.6673 11.6617 14.6673 7.99984C14.6672 4.33805 11.7854 1.33326 8.18685 1.33317Z" fill="currentColor"/></g>', // Daum icon/normal/refresh/undo (Figma 695:17976)
       bulb: '<path d="M9 21h6M10 18h4M12 3a6 6 0 0 0-3.5 10.9c.8.6 1.2 1.4 1.4 2.1h4.2c.2-.7.6-1.5 1.4-2.1A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
       more: '<circle cx="6" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="18" cy="12" r="1.6" fill="currentColor"/>',
       end: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 12.5l2.5 2.5L16 9.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>',
@@ -1217,7 +1217,7 @@
             <button class="btn" data-resume-play>더 두기</button>
           </div>` : ""}
           <div class="modal-actions">
-            <button class="btn" data-close-result>판 살펴보기</button>
+            <button class="btn neutral" data-close-result>판 살펴보기</button>
             <button class="btn primary icon" data-rematch>${icon("refresh")} 다시 한 판</button>
           </div>
         </div>
@@ -1234,7 +1234,7 @@
           <h2>${c.title}</h2>
           <p class="muted">${c.body}</p>
           <div class="modal-actions">
-            <button class="btn" data-confirm-cancel>${c.cancel || "취소"}</button>
+            <button class="btn neutral" data-confirm-cancel>${c.cancel || "취소"}</button>
             <button class="btn ${c.danger ? "danger-fill" : "primary"} icon" data-confirm-ok>${c.confirm}</button>
           </div>
         </div>
