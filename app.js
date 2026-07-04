@@ -753,6 +753,8 @@
     }
     if (aiAgreesToEnd()) {
       autoFinish("이제 둘 곳이 거의 없어 종국했어요.");
+    } else if (gameIsDecided()) {
+      autoFinish("점수 차가 커서 AI가 종국에 동의했어요.");
     } else {
       state.endProposalCooldown = 8;
       state.endingNotice = "AI가 아직 둘 곳이 있대요. 조금 더 둔 뒤 다시 끝내기를 눌러주세요.";
@@ -763,6 +765,14 @@
       }, 2400);
     }
     render();
+  }
+
+  // 아직 둘 곳이 남았어도 점수 차가 압도적이면 종국 제안을 받아준다(캐주얼 UX).
+  // aiShouldResign과 같은 임계값 — 다만 이쪽은 이기고 지는 방향과 무관.
+  function gameIsDecided() {
+    if (state.moveNumber < state.size * 2) return false; // 초반엔 추정이 불안정
+    const s = scoreBoard();
+    return Math.abs(s.black - s.white) >= Math.max(18, state.size * state.size * 0.22);
   }
 
   function aiAgreesToEnd() {
