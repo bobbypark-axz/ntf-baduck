@@ -2400,9 +2400,9 @@ input.name-input:focus {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center; /* 헤더+컨트롤을 하나의 그룹으로 중앙 배치 */
   align-items: stretch;
-  gap: 16px;
+  gap: 28px;
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
@@ -2410,62 +2410,20 @@ input.name-input:focus {
   background: linear-gradient(180deg, #fff 0%, var(--bg, #f4f5f7) 100%);
 }
 
-/* 히어로 */
-.start-view.simple .start-hero-block {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* 설정 화면 헤더 — 브랜드 히어로는 스플래시가 담당, 여기는 '대국 설정'만 */
+.setup-head {
   text-align: center;
-  gap: 16px;
-  margin-top: clamp(8px, 5vh, 56px);
 }
-.game-emblem {
-  position: relative;
-  width: 104px;
-  height: 104px;
-  border-radius: 28px;
-  background: linear-gradient(135deg, #ebca88, #c99553);
-  box-shadow: inset 0 0 0 1px rgba(120,80,30,.28), 0 20px 38px -16px rgba(120,80,30,.6);
-}
-.game-emblem::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    repeating-linear-gradient(0deg, rgba(60,36,10,.16) 0 1px, transparent 1px 17px),
-    repeating-linear-gradient(90deg, rgba(60,36,10,.16) 0 1px, transparent 1px 17px);
-}
-.emblem-stone {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  z-index: 1;
-}
-.emblem-stone.black {
-  left: 22px; top: 30px;
-  background: radial-gradient(circle at 34% 30%, #5c5c5c, #060606 72%);
-  box-shadow: 0 2px 4px rgba(0,0,0,.45);
-}
-.emblem-stone.white {
-  right: 22px; bottom: 30px;
-  background: radial-gradient(circle at 34% 30%, #fff, #d6d8dc 78%);
-  box-shadow: 0 2px 4px rgba(0,0,0,.25);
-}
-.game-title {
+.setup-head h2 {
   margin: 0;
-  font-size: clamp(26px, 9vw, 40px);
-  font-weight: 700;
-  letter-spacing: -.02em;
+  font: var(--font-title-2);
   color: var(--ink, #171719);
 }
-.game-tagline {
-  margin: 0;
+.setup-head p {
+  margin: 6px 0 0;
   font-size: 14px;
-  line-height: 1.5;
   font-weight: 500;
-  color: var(--muted, #5b5c61);
+  color: var(--black-48);
 }
 
 /* 컨트롤 */

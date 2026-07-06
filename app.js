@@ -1126,13 +1126,9 @@
       </button>`).join("");
     return `
       <section class="start-view simple" aria-label="대국 시작 화면">
-        <div class="start-hero-block">
-          <div class="game-emblem" aria-hidden="true">
-            <span class="emblem-stone black"></span>
-            <span class="emblem-stone white"></span>
-          </div>
-          <h1 class="game-title">바둑</h1>
-          <p class="game-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
+        <div class="setup-head">
+          <h2>대국 설정</h2>
+          <p>판 크기와 내 돌 색을 골라주세요</p>
         </div>
         <div class="start-controls">
           <div class="seg-presets" role="group" aria-label="난이도와 판 크기">
