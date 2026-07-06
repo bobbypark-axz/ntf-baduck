@@ -2485,7 +2485,7 @@ input.name-input:focus {
   gap: 1px;
   padding: 9px 4px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--btn-radius); /* Box R8 (고정) */
   background: transparent;
   cursor: pointer;
   transition: background .15s, box-shadow .15s;
@@ -2532,7 +2532,7 @@ input.name-input:focus {
   border: 1px solid var(--line, #e4e6ea);
   background: #fff;
   color: var(--ink, #171719);
-  font-size: 14px;
+  font-size: 16px; /* 2XLarge(h48) 버튼 폰트 */
   font-weight: 700;
   display: inline-flex;
   align-items: center;
