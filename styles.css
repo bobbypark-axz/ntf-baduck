@@ -1336,21 +1336,6 @@ input.name-input:focus {
   min-height: 48px;
   font-size: 16px;
 }
-/* 종국 결과 화면의 보정 줄 — "결과가 이상한가요? [판정 고치기] [더 두기]" */
-.result-redo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line-soft);
-  font: var(--font-caption);
-  font-weight: 700;
-  color: var(--muted);
-}
-.result-redo .btn { min-height: 34px; padding: 0 12px; font-size: 14px; }
 .modal.confirm { width: 280px; max-width: 100%; }   /* 알럿형 팝업: 280 고정 · 센터 (scrim이 중앙 정렬) */
 .modal.confirm h2 { font: var(--font-body-1); font-weight: 700; color: var(--text-88); }   /* 타이틀 17 (Body 1 Bold) */
 .modal.confirm p { margin-top: 8px; margin-bottom: 22px; font: var(--font-body-3); color: var(--text-64); }   /* 부가정보 15 / 64% */
