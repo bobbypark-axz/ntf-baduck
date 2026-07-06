@@ -83,6 +83,7 @@
     endingNotice: "",
     aiProposing: false,
     tutorialOpen: false,
+    splashDone: false, // 첫 진입 시 스플래시 노출 (세션당 1회)
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -1089,6 +1090,34 @@
     { size: 19, difficulty: "hard",   label: "정식", spec: "19 × 19", time: "약 20분" },
   ];
 
+  function splashView() {
+    const stones = [
+      [2, 2, BLACK], [6, 2, WHITE], [4, 4, BLACK], [5, 3, WHITE],
+      [2, 6, WHITE], [6, 6, BLACK], [3, 5, BLACK],
+    ];
+    return `
+      <section class="splash-view" aria-label="바둑 시작">
+        <div class="splash-top">
+          <h1 class="splash-title">바둑</h1>
+          <p class="splash-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
+        </div>
+        <div class="splash-hero" aria-hidden="true">
+          <span class="splash-spark s1">✦</span>
+          <span class="splash-spark s2">✦</span>
+          <span class="splash-spark s3">✦</span>
+          <span class="splash-spark s4">✦</span>
+          <div class="splash-board">${tBoard(9, stones)}</div>
+          <span class="splash-stone black"></span>
+          <span class="splash-stone white"></span>
+        </div>
+        <div class="splash-actions">
+          <button class="splash-cta" data-splash-start>${icon("play")} 게임 시작하기</button>
+          <button class="splash-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
+        </div>
+      </section>
+    `;
+  }
+
   function startView() {
     const current = START_PRESETS.find((p) => p.size === state.size) || START_PRESETS[0];
     const presets = START_PRESETS.map((p) => `
@@ -1534,7 +1563,7 @@
     const tipKind = state.lastEvent && state.lastEvent.startsWith("capture:") ? "event" : "phase";
     app.innerHTML = `
       <div class="app ${state.started ? "playing" : "setup"}">
-        ${state.started ? "" : startView()}
+        ${state.started ? "" : state.splashDone ? startView() : splashView()}
         <header class="topbar">
           <div class="brand">
             <div class="brand-mark"></div>
@@ -1623,7 +1652,7 @@
       return;
     }
     const node = target.closest(
-      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close]"
+      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close],[data-splash-start]"
     );
     if (!node || node.disabled) return;
     const ds = node.dataset;
@@ -1642,6 +1671,7 @@
     else if ("markConfirm" in ds) info = { name: "mark-confirm" };
     else if ("aiEndAccept" in ds) info = { name: "ai-end-accept" };
     else if ("aiEndDecline" in ds) info = { name: "ai-end-decline" };
+    else if ("splashStart" in ds) info = { name: "splash-start" };
     else if ("tutorialOpen" in ds) info = { name: "tutorial-open" };
     else if ("tutorialClose" in ds) info = { name: "tutorial-close" };
     else if ("sheetOpen" in ds) info = { name: "sheet-open" };
@@ -1700,6 +1730,7 @@
       render();
       return;
     }
+    if (name === "splash-start") { state.splashDone = true; render(); return; }
     if (name === "tutorial-open") { state.tutorialOpen = true; render(); return; }
     if (name === "tutorial-close") { state.tutorialOpen = false; render(); return; }
     if (name === "start") {
