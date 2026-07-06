@@ -1258,7 +1258,7 @@ input.name-input:focus {
   border-radius: var(--popup-radius);
   background: var(--popup-bg);
   box-shadow: var(--popup-shadow);
-  padding: 28px;
+  padding: 28px 30px; /* 레이어 팝업 좌우 30px 통일 (알럿형 제외) */
   text-align: center;
   animation: pop-in 200ms cubic-bezier(.2,.8,.3,1.1);
 }
@@ -1336,7 +1336,7 @@ input.name-input:focus {
   min-height: 48px;
   font-size: 16px;
 }
-.modal.confirm { width: 280px; max-width: 100%; }   /* 알럿형 팝업: 280 고정 · 센터 (scrim이 중앙 정렬) */
+.modal.confirm { width: 280px; max-width: 100%; padding: 28px; }   /* 알럿형 팝업: 280 고정 · 센터 · 좌우 30px 통일 대상에서 제외 */
 .modal.confirm h2 { font: var(--font-body-1); font-weight: 700; color: var(--text-88); }   /* 타이틀 17 (Body 1 Bold) */
 .modal.confirm p { margin-top: 8px; margin-bottom: 22px; font: var(--font-body-3); color: var(--text-64); }   /* 부가정보 15 / 64% */
 .modal.confirm .modal-actions { justify-content: center; gap: 8px; }
@@ -1787,7 +1787,7 @@ input.name-input:focus {
   animation: pop-in 220ms cubic-bezier(.2,.8,.3,1.1);
 }
 .tutorial-head {
-  padding: 22px 28px 14px;
+  padding: 22px 30px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1808,7 +1808,7 @@ input.name-input:focus {
   margin: 0;
 }
 .tutorial-body {
-  padding: 16px 28px 28px;
+  padding: 16px 30px 28px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   flex: 1;
@@ -1877,7 +1877,7 @@ input.name-input:focus {
 }
 .t-list li b { font-weight: 700; color: var(--blue-dark); }
 .tutorial-foot {
-  padding: 18px 28px max(22px, env(safe-area-inset-bottom));
+  padding: 18px 30px max(22px, env(safe-area-inset-bottom));
   border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -2178,7 +2178,7 @@ input.name-input:focus {
   .tip-card .card-head { margin-bottom: 6px; }
   .modal {
     border-radius: var(--popup-radius);
-    padding: 26px 22px 22px;
+    padding: 26px 30px 22px;
   }
 }
 
