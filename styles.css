@@ -2400,9 +2400,9 @@ input.name-input:focus {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* 헤더+컨트롤을 하나의 그룹으로 중앙 배치 */
+  justify-content: space-between;
   align-items: stretch;
-  gap: 28px;
+  gap: 16px;
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
@@ -2410,20 +2410,62 @@ input.name-input:focus {
   background: linear-gradient(180deg, #fff 0%, var(--bg, #f4f5f7) 100%);
 }
 
-/* 설정 화면 헤더 — 브랜드 히어로는 스플래시가 담당, 여기는 '대국 설정'만 */
-.setup-head {
+/* 히어로 */
+.start-view.simple .start-hero-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  gap: 16px;
+  margin-top: clamp(8px, 5vh, 56px);
 }
-.setup-head h2 {
+.game-emblem {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #ebca88, #c99553);
+  box-shadow: inset 0 0 0 1px rgba(120,80,30,.28), 0 20px 38px -16px rgba(120,80,30,.6);
+}
+.game-emblem::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(0deg, rgba(60,36,10,.16) 0 1px, transparent 1px 17px),
+    repeating-linear-gradient(90deg, rgba(60,36,10,.16) 0 1px, transparent 1px 17px);
+}
+.emblem-stone {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  z-index: 1;
+}
+.emblem-stone.black {
+  left: 22px; top: 30px;
+  background: radial-gradient(circle at 34% 30%, #5c5c5c, #060606 72%);
+  box-shadow: 0 2px 4px rgba(0,0,0,.45);
+}
+.emblem-stone.white {
+  right: 22px; bottom: 30px;
+  background: radial-gradient(circle at 34% 30%, #fff, #d6d8dc 78%);
+  box-shadow: 0 2px 4px rgba(0,0,0,.25);
+}
+.game-title {
   margin: 0;
-  font: var(--font-title-2);
+  font-size: clamp(26px, 9vw, 40px);
+  font-weight: 700;
+  letter-spacing: -.02em;
   color: var(--ink, #171719);
 }
-.setup-head p {
-  margin: 6px 0 0;
+.game-tagline {
+  margin: 0;
   font-size: 14px;
+  line-height: 1.5;
   font-weight: 500;
-  color: var(--black-48);
+  color: var(--muted, #5b5c61);
 }
 
 /* 컨트롤 */
