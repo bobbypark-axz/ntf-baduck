@@ -1091,12 +1091,8 @@
   ];
 
   function splashView() {
-    const stones = [
-      [2, 2, BLACK], [6, 2, WHITE], [4, 4, BLACK], [5, 3, WHITE],
-      [2, 6, WHITE], [6, 6, BLACK], [3, 5, BLACK],
-    ];
     return `
-      <section class="splash-view" aria-label="바둑 시작">
+      <section class="splash-view" aria-label="바둑 시작" data-splash-start>
         <div class="splash-top">
           <h1 class="splash-title">바둑</h1>
           <p class="splash-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
@@ -1106,16 +1102,20 @@
           <span class="splash-spark s2">✦</span>
           <span class="splash-spark s3">✦</span>
           <span class="splash-spark s4">✦</span>
-          <div class="splash-board">${tBoard(9, stones)}</div>
-          <span class="splash-stone black"></span>
-          <span class="splash-stone white"></span>
+          <img class="splash-board" src="icons/hero-baduk.png" alt="">
         </div>
-        <div class="splash-actions">
-          <button class="splash-cta" data-splash-start>${icon("play")} 게임 시작하기</button>
-          <button class="splash-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
-        </div>
+        <p class="splash-hint">화면을 누르면 시작해요</p>
       </section>
     `;
+  }
+
+  function dismissSplash() {
+    if (state.splashDone) return;
+    window.clearTimeout(dismissSplash.autoTimer);
+    const el = app.querySelector(".splash-view");
+    if (!el || el.classList.contains("leaving")) return;
+    el.classList.add("leaving");
+    window.setTimeout(() => { state.splashDone = true; render(); }, 360);
   }
 
   function startView() {
@@ -1127,10 +1127,7 @@
     return `
       <section class="start-view simple" aria-label="대국 시작 화면">
         <div class="start-hero-block">
-          <div class="game-emblem" aria-hidden="true">
-            <span class="emblem-stone black"></span>
-            <span class="emblem-stone white"></span>
-          </div>
+          <img class="game-emblem" src="icons/hero-baduk.png" alt="" aria-hidden="true">
           <h1 class="game-title">바둑</h1>
           <p class="game-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
         </div>
@@ -1623,6 +1620,9 @@
     `;
     bind();
     updateSheetGrad();
+    if (!state.started && !state.splashDone && !dismissSplash.autoTimer) {
+      dismissSplash.autoTimer = window.setTimeout(dismissSplash, 2500);
+    }
   }
 
   function updateSheetGrad() {
@@ -1730,7 +1730,7 @@
       render();
       return;
     }
-    if (name === "splash-start") { state.splashDone = true; render(); return; }
+    if (name === "splash-start") { dismissSplash(); return; }
     if (name === "tutorial-open") { state.tutorialOpen = true; render(); return; }
     if (name === "tutorial-close") { state.tutorialOpen = false; render(); return; }
     if (name === "start") {
