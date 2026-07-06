@@ -1104,7 +1104,6 @@
           <span class="splash-spark s4">✦</span>
           <img class="splash-board" src="icons/hero-baduk.png" alt="">
         </div>
-        <p class="splash-hint">화면을 누르면 시작해요</p>
       </section>
     `;
   }
@@ -1119,7 +1118,6 @@
   }
 
   function startView() {
-    const current = START_PRESETS.find((p) => p.size === state.size) || START_PRESETS[0];
     const presets = START_PRESETS.map((p) => `
       <button class="seg-preset ${state.size === p.size ? "selected" : ""}" data-setting="preset" data-value="${p.size}">
         <b>${p.label}</b><small>${p.spec}</small>
@@ -1143,7 +1141,6 @@
               <span class="seg-stone white"></span><b>백</b><small>AI가 먼저</small>
             </button>
           </div>
-          <p class="start-meta">AI ${DIFFICULTY_COPY[current.difficulty].title} · 한 판에 ${current.time}</p>
           <button class="start-cta" data-start>${icon("play")} 대국 시작</button>
           <button class="start-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
         </div>
@@ -1309,15 +1306,14 @@
     const lines = [];
     for (let i = 0; i < size; i += 1) {
       const pos = half + i * cell;
-      lines.push(`<line x1="${half}" y1="${pos}" x2="${100 - half}" y2="${pos}" stroke="rgba(40,24,8,.7)" stroke-width=".4"/>`);
-      lines.push(`<line x1="${pos}" y1="${half}" x2="${pos}" y2="${100 - half}" stroke="rgba(40,24,8,.7)" stroke-width=".4"/>`);
+      lines.push(`<line x1="${half}" y1="${pos}" x2="${100 - half}" y2="${pos}" stroke="rgba(204,94,18,.55)" stroke-width=".4"/>`);
+      lines.push(`<line x1="${pos}" y1="${half}" x2="${pos}" y2="${100 - half}" stroke="rgba(204,94,18,.55)" stroke-width=".4"/>`);
     }
     const stoneEls = stones.map(([x, y, c]) => {
       const cx = half + x * cell;
       const cy = half + y * cell;
-      return c === BLACK
-        ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#171719"/>`
-        : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#fff" stroke="#bfbfbf" stroke-width=".25"/>`;
+      const src = c === BLACK ? "icons/stone-black.png" : "icons/stone-white.png";
+      return `<image href="${src}" x="${cx - r}" y="${cy - r}" width="${r * 2}" height="${r * 2}"/>`;
     }).join("");
     const markEls = marks.map(([x, y, type]) => {
       const cx = half + x * cell;
@@ -1334,7 +1330,13 @@
     }).join("");
     return `
       <svg class="t-board-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-        <rect width="100" height="100" rx="3" fill="#e6c178"/>
+        <defs>
+          <linearGradient id="tb-bg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFCF99"/>
+            <stop offset="1" stop-color="#F77F00"/>
+          </linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="6" fill="url(#tb-bg)"/>
         ${lines.join("")}
         ${stoneEls}
         ${markEls}
@@ -1459,7 +1461,6 @@
           </div>
           <footer class="tutorial-foot">
             <button class="btn icon" data-tutorial-close>${icon("play")} 한 판 두러 가기</button>
-            <p class="tutorial-foot-note">시작 화면으로 돌아가요. 9 x 9 빠른 한 판부터 추천드려요.</p>
           </footer>
         </div>
       </div>
@@ -1566,7 +1567,6 @@
             <div class="brand-mark"></div>
             <div>
               <div class="brand-title">바둑</div>
-              <div class="brand-sub">Baduk · 圍棋</div>
             </div>
           </div>
           <div class="nav-spacer"></div>

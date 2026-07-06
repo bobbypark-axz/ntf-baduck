@@ -436,13 +436,6 @@ h2, h3, h4, p { margin: 0; }
   font-size: 20px;
   line-height: 1.1;
 }
-.brand-sub {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
 .nav-spacer { flex: 1; }
 .meta-pills {
   display: flex;
@@ -653,12 +646,12 @@ h3 {
   flex: none;
 }
 .black {
-  background: radial-gradient(circle at 32% 28%, #5d5d5d 0, #161616 45%, #000 100%);
-  box-shadow: inset -2px -3px 4px rgba(0,0,0,.55), inset 1px 1px 2px rgba(255,255,255,.06), 0 2px 4px rgba(0,0,0,.35);
+  background: url("icons/stone-black.png") center / 100% 100% no-repeat;
+  box-shadow: 0 2px 4px rgba(0,0,0,.3);
 }
 .white {
-  background: radial-gradient(circle at 32% 28%, #fff 0, #f2f2f2 48%, #bfbfbf 100%);
-  box-shadow: inset -2px -3px 4px rgba(0,0,0,.18), inset 1px 1px 2px rgba(255,255,255,.9), 0 2px 4px rgba(0,0,0,.22);
+  background: url("icons/stone-white.png") center / 100% 100% no-repeat;
+  box-shadow: 0 2px 4px rgba(0,0,0,.18);
 }
 
 /* ---------------- Move log ---------------- */
@@ -1905,11 +1898,6 @@ input.name-input:focus {
 }
 .tutorial-foot .btn:active:not(:disabled) { transform: scale(.98); }
 .tutorial-foot .btn svg { width: 20px; height: 20px; }
-.tutorial-foot-note {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
 @media (max-width: 720px) {
   .tutorial { border-radius: 0; max-height: 100svh; min-height: 100svh; }
   .tutorial-head { padding: max(14px, env(safe-area-inset-top)) 18px 12px; }
@@ -1975,7 +1963,6 @@ input.name-input:focus {
 }
 @media (max-width: 560px) {
   .brand { min-width: 0; }
-  .brand-sub { display: none; }
   .side { grid-template-columns: 1fr; }
   .actions {
     width: 100%;
@@ -2470,15 +2457,7 @@ input.name-input:focus {
 /* 내 색 세그먼트 (2칸) */
 .seg-colors { grid-template-columns: repeat(2, 1fr); }
 .seg-stone { width: 22px; height: 22px; border-radius: 50%; margin-bottom: 2px; }
-.seg-stone.black { background: radial-gradient(circle at 34% 30%, #5c5c5c, #060606 72%); box-shadow: 0 1px 2px rgba(0,0,0,.4); }
-.seg-stone.white { background: radial-gradient(circle at 34% 30%, #fff, #d6d8dc 78%); box-shadow: inset 0 0 0 1px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.18); }
-.start-meta {
-  margin: 2px 0;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--faint, #8b8c91);
-}
+.seg-stone.black, .seg-stone.white { box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .start-view.simple .start-cta {
   width: 100%;
   min-height: 54px;
@@ -2553,7 +2532,7 @@ input.name-input:focus {
   justify-content: center;
 }
 .splash-board {
-  width: min(62vw, 280px);
+  width: min(46vw, 205px);
   height: auto;
   transform: rotate(-5deg);
   filter: drop-shadow(0 34px 40px rgba(204, 94, 18, .38));
