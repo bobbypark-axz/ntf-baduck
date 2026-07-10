@@ -28,7 +28,7 @@ eval([
   "cloneBoard", "inBounds", "neighbors", "getGroup", "boardKey",
   "isLegal", "legalOn", "legalMoves", "isOwnEye",
   "chooseMove", "evaluateMove", "starPointBonus", "starPoints",
-  "applySim", "bestReplyScore", "ladderPenalty", "ladderCaptured",
+  "applySim", "bestReplyScore", "bestReplyMove", "ladderPenalty", "ladderCaptured",
 ].map(extract).join("\n"));
 
 function makeBoard(rows) {

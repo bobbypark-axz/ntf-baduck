@@ -494,14 +494,17 @@
       return scored[0][0] < -8 ? null : scored[0][1];
     }
 
-    // 고급: 1차 점수 상위 후보만 골라 "상대가 최선으로 응수하면?"까지 한 수 더 읽는다.
+    // 고급: 상위 후보를 "나 → 상대 최선 응수 → 나의 반격"까지 3수 읽는다.
+    // 상대가 되받아치는 수라도 내가 곧바로 만회할 수 있으면 그만큼 두려움을 덜어준다.
     const opp = state.turn === BLACK ? WHITE : BLACK;
     let best = scored[0][1];
     let bestDeep = -Infinity;
     for (const [base, move] of scored.slice(0, 10)) {
       const sim = applySim(state.board, move[0], move[1], state.turn);
       if (!sim) continue;
-      const deep = base - bestReplyScore(sim.board, opp) * 0.75 + ladderPenalty(sim.board, move[0], move[1]);
+      const reply = bestReplyMove(sim.board, opp);
+      let deep = base - reply.gain * 0.75 + ladderPenalty(sim.board, move[0], move[1]);
+      if (reply.board) deep += bestReplyScore(reply.board, state.turn) * 0.4;
       if (deep > bestDeep) {
         bestDeep = deep;
         best = move;
@@ -552,6 +555,29 @@
       }
     }
     return best;
+  }
+
+  // bestReplyScore의 "수(move)" 버전: 상대 최선 응수와, 그 수를 둔 뒤의 보드를 함께 돌려준다.
+  function bestReplyMove(board, color) {
+    const size = board.length;
+    const me = color === BLACK ? WHITE : BLACK;
+    let best = 0;
+    let bestBoard = null;
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        if (board[y][x] !== EMPTY) continue;
+        if (!neighbors(x, y, size).some(([nx, ny]) => board[ny][nx] !== EMPTY)) continue;
+        const sim = applySim(board, x, y, color);
+        if (!sim) continue;
+        let gain = sim.captured * 16;
+        for (const [nx, ny] of neighbors(x, y, size)) {
+          if (sim.board[ny][nx] === me && getGroup(sim.board, nx, ny).liberties.size === 1) gain += 5;
+        }
+        if (getGroup(sim.board, x, y).liberties.size <= 1) gain -= 12;
+        if (gain > best) { best = gain; bestBoard = sim.board; }
+      }
+    }
+    return { gain: best, board: bestBoard };
   }
 
   // 방금 둔 돌의 그룹이 활로 2개짜리이고 축(사다리)으로 끝까지 잡히는 자리면 감점.
