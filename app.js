@@ -1589,7 +1589,7 @@
       <div class="app ${state.started ? "playing" : "setup"}">
         ${state.started ? "" : state.splashDone ? startView() : splashView()}
         <header class="topbar">
-          <div class="brand">
+          <div class="brand" data-back-home role="button" tabindex="0" aria-label="홈으로">
             <div class="brand-mark"></div>
             <div>
               <div class="brand-title">바둑</div>
