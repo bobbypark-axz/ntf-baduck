@@ -478,13 +478,85 @@
     state.endingNotice = notice || "";
   }
 
-  function chooseMove() {
+  // ── 고급 AI: MCTS(몬테카를로 트리 탐색) ─────────────────────────
+  // 엔진 본체는 ai-engine.js(순수 모듈)로 분리 — 판을 끝까지 둬 보고 실제 집을 세므로
+  // evaluateMove 휴리스틱과 달리 집·사활·판세를 스스로 읽는다. 계산은 웹 워커
+  // (ai-worker.js)에서 돌려 수 초짜리 예산에도 UI가 멈추지 않는다. 워커를 못 쓰는
+  // 환경이면 같은 엔진을 메인 스레드에서 동기 실행한다(폴백).
+  const MCTS_BUDGET_MS = { 5: 300, 9: 1500, 13: 2500, 19: 4000 };
+  let aiWorker = null;
+  let aiWorkerBroken = false;
+  let aiRequestSeq = 0;
+
+  function mctsOptions() {
+    const opts = { budgetMs: MCTS_BUDGET_MS[state.size] || 2500 };
+    if (state.mctsIters) opts.maxIters = state.mctsIters; // 검증 하네스용: 시계 대신 반복 예산
+    return opts;
+  }
+
+  function mctsPosition() {
+    return { board: state.board, turn: state.turn, koKey: state.koKey, size: state.size, lastMove: state.lastMove };
+  }
+
+  // 동기 실행(워커 폴백 + tools/ai-check.js 하네스)
+  function mctsMove() {
+    return globalThis.BadukAI ? globalThis.BadukAI.mctsSearch(mctsPosition(), mctsOptions()) : null;
+  }
+
+  function mctsMoveAsync() {
+    if (aiWorkerBroken || typeof Worker === "undefined") return Promise.resolve(mctsMove());
+    try {
+      aiWorker ||= new Worker("ai-worker.js");
+    } catch (error) {
+      aiWorkerBroken = true;
+      return Promise.resolve(mctsMove());
+    }
+    aiRequestSeq += 1;
+    const id = aiRequestSeq;
+    return new Promise((resolve) => {
+      const onMessage = (event) => {
+        if (event.data.id !== id) return;
+        cleanup();
+        resolve(event.data.move);
+      };
+      const onError = () => {
+        cleanup();
+        aiWorkerBroken = true; // 워커 파일 로드 실패(예: file:// 실행) → 이후 동기 폴백
+        resolve(mctsMove());
+      };
+      function cleanup() {
+        aiWorker.removeEventListener("message", onMessage);
+        aiWorker.removeEventListener("error", onError);
+      }
+      aiWorker.addEventListener("message", onMessage);
+      aiWorker.addEventListener("error", onError);
+      aiWorker.postMessage({ id, ...mctsPosition(), opts: mctsOptions() });
+    });
+  }
+
+  // 새 판을 시작할 때 진행 중인 계산을 버린다(응답은 maybeAi의 토큰 검사로도 걸러짐).
+  function cancelAiThink() {
+    if (aiWorker) {
+      aiWorker.terminate();
+      aiWorker = null;
+    }
+  }
+
+  function chooseMove(options) {
+    options = options || {}; // 기본값 인자를 안 쓰는 이유: tools/ai-check.js가 중괄호 매칭으로 함수를 추출함
     const moves = legalMoves();
     if (!moves.length) return null;
     if (state.difficulty === "easy") {
       const filtered = moves.filter(([x, y]) => !isOwnEye(x, y));
       const pool = filtered.length ? filtered : moves;
       return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    // 고급: MCTS로 판세까지 읽는다(전 판 크기). 패스(null)·강제 스킵 시 아래 휴리스틱 폴백.
+    // UI 경로는 chooseMoveAsync가 워커로 돌리므로 여기 동기 호출은 폴백·하네스 전용.
+    if (state.difficulty === "hard" && !state.noMcts && !options.skipMcts) {
+      const mv = mctsMove();
+      if (mv) return mv;
     }
 
     const sample = state.difficulty === "hard" ? moves : moves.filter((_, i) => i % 2 === 0 || moves.length < 120);
@@ -512,6 +584,12 @@
     }
     // 패스 여부는 응수 감점이 섞이지 않은 1차 점수로 판단(상대가 유리하다고 패스하면 안 되므로)
     return scored[0][0] < -8 ? null : best;
+  }
+
+  // 고급의 MCTS만 워커(비동기)로 돌리고, 나머지는 기존 동기 경로를 그대로 쓴다.
+  function chooseMoveAsync() {
+    if (state.difficulty !== "hard" || state.noMcts) return Promise.resolve(chooseMove());
+    return mctsMoveAsync().then((move) => move || chooseMove({ skipMcts: true }));
   }
 
   // 가상 착수: 잡히는 상대 돌을 들어낸 보드를 돌려준다. 자살수면 null.
@@ -705,6 +783,8 @@
   }
 
   function newGame(options = {}) {
+    cancelAiThink();
+    maybeAi.token = (maybeAi.token || 0) + 1; // 이전 판의 AI 응답 무효화
     if (Object.prototype.hasOwnProperty.call(options, "size")) {
       state.size = Number(options.size);
     }
@@ -902,15 +982,22 @@
     if (state.ended || state.turn !== state.ai || state.thinking || state.phase !== "play") return;
     state.thinking = true;
     render();
-    const delay = state.difficulty === "easy" ? 360 : state.difficulty === "medium" ? 720 : 1100;
+    const delay = state.difficulty === "easy" ? 360 : state.difficulty === "medium" ? 720 : 150;
+    // 워커 계산이 끝나기 전에 판이 바뀌면(새 판 등) 늦게 온 응답을 버린다.
+    maybeAi.token = (maybeAi.token || 0) + 1;
+    const token = maybeAi.token;
+    const stale = () => token !== maybeAi.token || !state.thinking || state.ended || state.phase !== "play" || state.turn !== state.ai;
     window.setTimeout(() => {
+      if (stale()) return;
       if (aiShouldResign()) { aiResign(); return; }
-      const move = chooseMove();
-      if (move) place(move[0], move[1]);
-      else pass();
-      state.thinking = false;
-      maybeAiProposeEnd();
-      render();
+      chooseMoveAsync().then((move) => {
+        if (stale()) return;
+        if (move) place(move[0], move[1]);
+        else pass();
+        state.thinking = false;
+        maybeAiProposeEnd();
+        render();
+      });
     }, delay);
   }
 
@@ -1891,7 +1978,8 @@
   function showHint() {
     if (state.ended || state.thinking || state.turn !== state.human || state.phase !== "play") return;
     if (state.hintsUsed >= HINT_LIMIT) return;
-    const move = chooseMove();
+    // 힌트는 즉답이어야 하므로 MCTS(수 초) 대신 휴리스틱 경로로 고른다
+    const move = chooseMove({ skipMcts: true });
     if (!move) return;
     state.hint = move;
     state.hintsUsed += 1;
