@@ -1,0 +1,23 @@
+--- pristine/gnugo-3.8/engine/liberty.h	2009-02-18 06:41:31
++++ gnugo-wasm-tree/engine/liberty.h	2026-07-13 01:19:38
+@@ -857,8 +857,8 @@
+ extern struct worm_data worm[BOARDMAX];
+ 
+ /* Unconditionally meaningless moves. */
+-int meaningless_black_moves[BOARDMAX];
+-int meaningless_white_moves[BOARDMAX];
++extern int meaningless_black_moves[BOARDMAX];
++extern int meaningless_white_moves[BOARDMAX];
+ 
+ /* Surround cache (see surround.c) */
+ 
+--- pristine/gnugo-3.8/engine/globals.c	2009-02-18 06:41:31
++++ gnugo-wasm-tree/engine/globals.c	2026-07-13 01:19:38
+@@ -178,3 +178,7 @@
+ float strategical_weight    = 1.0;
+ float attack_dragon_weight  = 1.0;
+ float followup_weight       = 1.0;
++
++/* wasm 빌드: liberty.h의 extern 선언에 대한 실제 정의 */
++int meaningless_black_moves[BOARDMAX];
++int meaningless_white_moves[BOARDMAX];

@@ -495,7 +495,12 @@
   }
 
   function mctsPosition() {
-    return { board: state.board, turn: state.turn, koKey: state.koKey, size: state.size, lastMove: state.lastMove };
+    // koPoint: 패로 되따냄이 금지된 점(직전 수가 한 점 따냄일 때 그 자리).
+    // 워커의 GNU Go(19줄) 경로가 쓴다 — koKey(보드 문자열)로는 좌표를 알 수 없어 별도 전달.
+    const koPoint = state.koKey && state.lastCaptured && state.lastCaptured.length === 1
+      ? state.lastCaptured[0]
+      : null;
+    return { board: state.board, turn: state.turn, koKey: state.koKey, size: state.size, lastMove: state.lastMove, koPoint };
   }
 
   // 동기 실행(워커 폴백 + tools/ai-check.js 하네스)
@@ -997,8 +1002,8 @@
       if (aiShouldResign()) { aiResign(); return; }
       chooseMoveAsync().then((move) => {
         if (stale()) return;
-        if (move) place(move[0], move[1]);
-        else pass();
+        // 엔진이 준 수가 거부되면(엔진·앱의 패 해석 차 같은 희귀 케이스) 패스로 진행
+        if (!move || !place(move[0], move[1]).ok) pass();
         state.thinking = false;
         maybeAiProposeEnd();
         render();

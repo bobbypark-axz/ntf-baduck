@@ -1,0 +1,17 @@
+--- pristine/gnugo-3.8/utils/gg_utils.c	2009-02-18 06:41:31
++++ gnugo-wasm-tree/utils/gg_utils.c	2026-07-13 01:28:25
+@@ -366,7 +366,13 @@
+ {
+   int gap = nel;
+   int swap_made;
+-  char *end = (char *) base + width * (nel - 1);
++  char *end;
++  /* nel==0이면 (nel - 1)이 size_t 언더플로 → 포인터 산술 오버플로(UB).
++   * 최신 컴파일러(-O1+)가 이 UB를 전제로 비교를 잘못 최적화해 스왑 루프가
++   * 메모리를 폭주(전역 오염)한다. 원소 2개 미만은 정렬할 것이 없다. */
++  if (nel < 2)
++    return;
++  end = (char *) base + width * (nel - 1);
+   do {
+     char *a, *b;
+     swap_made = 0;
