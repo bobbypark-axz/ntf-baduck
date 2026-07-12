@@ -6,11 +6,14 @@
 // 진입점: globalThis.BadukAI.mctsSearch(pos, opts)
 //   pos  = { board(2차원 배열), turn, koKey, size }
 //   opts = { budgetMs(시간 예산), maxIters(반복 예산 — 검증용, 있으면 시계 무시),
-//            priors(휴리스틱 사전지식 주입, 기본 on), restrict(큰 판 후보 제한, 기본 on) }
-// 알고리즘: UCT 몬테카를로 트리 탐색.
+//            priors(휴리스틱 사전지식 주입, 기본 on), restrict(큰 판 후보 제한, 기본 on),
+//            rave(RAVE/AMAF 통계 공유, 기본 on) }
+// 알고리즘: UCT 몬테카를로 트리 탐색 + RAVE.
 //  - 판을 끝까지 둬 보고 실제 집을 세므로 점수표와 달리 집·사활·판세를 스스로 읽는다.
-//  - 큰 판(13·19) 대응 2단계 강화: ① 후보를 "돌 근처 2칸 + 화점"으로 좁혀 분기 축소
-//    ② 잡기/살리기/근접 같은 값싼 휴리스틱을 가상 방문(prior)으로 심어 유망수부터 탐색.
+//  - 큰 판(13·19) 대응 강화: ① 후보를 "돌 근처 2칸 + 화점"으로 좁혀 분기 축소
+//    ② 잡기/살리기/근접 같은 값싼 휴리스틱을 가상 방문(prior)으로 심어 유망수부터 탐색
+//    ③ RAVE: "시뮬레이션 어딘가에서 그 자리에 둔 대국의 승률"(AMAF)을 형제 수끼리
+//       공유해, 방문이 적은 초기에도 유망수를 빨리 골라낸다(큰 판일수록 효과 큼).
 (() => {
   const EMPTY = 0;
   const BLACK = 1;
@@ -18,6 +21,8 @@
   const komiFor = (size) => (size === 5 ? 0.5 : 6.5);
   const MCTS_MAX_ITERS = 40000;
   const UCT_C = 1.4;
+  const RAVE_C = 0.5; // RAVE가 탐색을 이끌 땐 UCT 탐사항을 줄인다(MoGo 계열 관례)
+  const RAVE_K = 1000; // 방문이 이 규모를 넘으면 RAVE 대신 실측 승률을 믿는다
   const PRIOR_N = 8; // prior를 몇 번의 가상 방문으로 칠지
 
   function otherColor(c) { return c === BLACK ? WHITE : BLACK; }
@@ -136,8 +141,13 @@
   }
 
   // 축 읽기: 단수에 몰린 (gx,gy) 그룹이 도망쳐도 결국 잡히면 true.
+  // 노드 예산: 도망자 활로가 2개면 양쪽 추격을 모두 재귀하므로 최악 2^40으로
+  // 폭발한다(실전에서 드물게 걸려 수 분씩 멈춤). 호출당 총 노드 수를 제한하고,
+  // 초과하면 "안 잡힌다"로 안전하게 후퇴한다(수를 버리는 쪽보다 남기는 쪽이 무해).
   function ladderCaptured(board, gx, gy, depth) {
-    if (depth > 40) return false;
+    if (depth === 0) ladderCaptured.nodes = 0;
+    ladderCaptured.nodes += 1;
+    if (depth > 40 || ladderCaptured.nodes > 500) return false;
     const color = board[gy][gx];
     const opp = color === BLACK ? WHITE : BLACK;
     const group = getGroup(board, gx, gy);
@@ -276,34 +286,54 @@
 
   // ── 트리 ────────────────────────────────────────────────────
   function makeMctsNode(board, turn, koKey, move, parent, size, cfg) {
+    return {
+      board, turn, koKey, move, size, cfg,
+      parent: parent || null,
+      moverColor: parent ? parent.turn : null, // 이 노드로 오려고 둔 색
+      children: [],
+      untried: null, // 게으른 생성: 처음 다시 방문될 때 채운다(materializeMoves)
+      priors: null,
+      ui: 0, // 다음에 확장할 untried 인덱스(정렬돼 있으면 유망수 우선)
+      visits: 0,
+      wins: 0, // moverColor 기준 승수
+      raveN: 0,
+      raveW: 0, // moverColor 기준 AMAF 승수
+    };
+  }
+
+  // 후보 생성(genMoves+priors)은 노드당 비용이 커서(19×19 후보 ~250개 배열 할당)
+  // 생성 시점이 아니라 "노드가 다시 선택될 때" 채운다. 대부분의 잎은 재방문되지
+  // 않으므로 반복당 비용·GC 압력이 크게 준다(같은 국면이면 결과는 동일 — 순수 지연).
+  function materializeMoves(node) {
+    if (node.untried !== null) return;
+    const { board, turn, size, cfg } = node;
     const mask = cfg.restrict ? allowedMask(board, size) : null;
-    const untried = genMoves(board, turn, size, koKey, mask);
+    const untried = genMoves(board, turn, size, node.koKey, mask);
     let priors = null;
     if (cfg.priors && untried.length) {
-      priors = computePriors(board, untried, turn, size, move);
+      priors = computePriors(board, untried, turn, size, node.move);
       // 유망수(높은 prior)부터 확장하도록 함께 정렬
       const order = untried.map((mv, i) => [priors[i], mv]).sort((a, b) => b[0] - a[0]);
       for (let i = 0; i < order.length; i += 1) { priors[i] = order[i][0]; untried[i] = order[i][1]; }
     }
-    return {
-      board, turn, koKey, move,
-      parent: parent || null,
-      moverColor: parent ? parent.turn : null, // 이 노드로 오려고 둔 색
-      children: [],
-      untried,
-      priors,
-      ui: 0, // 다음에 확장할 untried 인덱스(정렬돼 있으면 유망수 우선)
-      visits: 0,
-      wins: 0, // moverColor 기준 승수
-    };
+    node.untried = untried;
+    node.priors = priors;
   }
 
-  function selectUct(node) {
+  function selectUct(node, useRave) {
     let best = null;
     let bestVal = -Infinity;
     const lnN = Math.log(node.visits);
+    // β: 방문이 적을 땐 RAVE(형제 공유 통계)를, 쌓일수록 실측 승률을 믿는다
+    const beta = useRave ? Math.sqrt(RAVE_K / (3 * node.visits + RAVE_K)) : 0;
     for (const c of node.children) {
-      const val = c.wins / c.visits + UCT_C * Math.sqrt(lnN / c.visits);
+      const q = c.wins / c.visits;
+      let val;
+      if (useRave && c.raveN > 0) {
+        val = (1 - beta) * q + beta * (c.raveW / c.raveN) + RAVE_C * Math.sqrt(lnN / c.visits);
+      } else {
+        val = q + UCT_C * Math.sqrt(lnN / c.visits);
+      }
       if (val > bestVal) { bestVal = val; best = c; }
     }
     return best;
@@ -320,6 +350,8 @@
     const N = size * size;
     const nbrList = new Int32Array(N * 4);
     const nbrCnt = new Int8Array(N);
+    const nbr8List = new Int32Array(N * 8); // 지역성 응수용 8방(대각 포함) 이웃
+    const nbr8Cnt = new Int8Array(N);
     for (let y = 0; y < size; y += 1) {
       for (let x = 0; x < size; x += 1) {
         const i = y * size + x;
@@ -330,13 +362,26 @@
         if (x > 0) { nbrList[base + c] = i - 1; c += 1; }
         if (x < size - 1) { nbrList[base + c] = i + 1; c += 1; }
         nbrCnt[i] = c;
+        const base8 = i * 8;
+        let c8 = 0;
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (!dx && !dy) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+            nbr8List[base8 + c8] = ny * size + nx; c8 += 1;
+          }
+        }
+        nbr8Cnt[i] = c8;
       }
     }
     PL = {
-      size, N, nbrList, nbrCnt,
+      size, N, nbrList, nbrCnt, nbr8List, nbr8Cnt,
       b: new Int8Array(N), mark: new Int32Array(N), stack: new Int32Array(N),
       grp: new Int32Array(N), empties: new Int32Array(N), pos: new Int32Array(N),
       seen: new Int32Array(N), seenGen: 0, // 시드 채집용 방문 표시(plScan의 mark/gen과 분리)
+      amafColor: new Int8Array(N), amafGen: new Int32Array(N), amafG: 0, // RAVE용: 이번 시뮬에서 그 점에 처음 둔 색
       ec: 0, gen: 1, scanCount: 0, scanLib: -1, koNext: -1,
     };
   }
@@ -433,7 +478,15 @@
   // startKo(트리의 문자열 패 키)는 플레이아웃 첫 수에만 영향 → 무시한다(랜덤 대국이라 무해).
   function mctsPlayout(startBoard, startTurn, startKo, size, startLast) {
     ensurePlayout(size);
+    // 세대 카운터 리셋: PL.gen이 Int32Array(mark) 범위(2^31)를 넘으면 저장값이 음수로
+    // 랩돼 "mark[i] === gen"이 영원히 거짓 → flood-fill이 무한 재방문(행). plScan이
+    // 호출당 1씩 올려 19×19 실전 예산 기준 수십 수마다 도달하는 실 버그다. 한 플레이
+    // 아웃의 증가량(<10만)에 큰 여유를 둔 문턱에서 배열과 함께 리셋한다.
+    if (PL.gen > 2000000000) { PL.gen = 1; PL.mark.fill(0); }
+    if (PL.seenGen > 2000000000) { PL.seenGen = 1; PL.seen.fill(0); }
+    if (PL.amafG > 2000000000) { PL.amafG = 1; PL.amafGen.fill(0); }
     const b = PL.b, N = PL.N;
+    PL.amafG += 1; // 이번 시뮬레이션의 AMAF 기록 세대
     PL.ec = 0;
     for (let y = 0; y < size; y += 1) { const row = startBoard[y]; for (let x = 0; x < size; x += 1) b[y * size + x] = row[x]; }
     for (let i = 0; i < N; i += 1) if (b[i] === EMPTY) { PL.pos[i] = PL.ec; PL.empties[PL.ec] = i; PL.ec += 1; }
@@ -490,6 +543,18 @@
           if (plPlace(u, turn) >= 0) { ko = PL.koNext; last = u; played = true; break; }
         }
       }
+      // 1.5) 지역성: 절반의 확률로 직전 수의 8방 이웃에 응수한다. 무작위 대국이
+      //      판 전체에 흩어지는 대신 실제 바둑처럼 접전이 이어져, 같은 시뮬 수로
+      //      사활·전투 평가가 훨씬 정확해진다(큰 판일수록 효과 큼).
+      if (!played && last >= 0 && Math.random() < 0.5) {
+        const base8 = last * 8, cnt8 = PL.nbr8Cnt[last];
+        const off = (Math.random() * cnt8) | 0;
+        for (let t = 0; t < 3; t += 1) { // 8방 중 무작위 3곳만 시도(과도한 밀착 방지)
+          const j = PL.nbr8List[base8 + ((off + t) % cnt8)];
+          if (b[j] !== EMPTY || j === ko || plIsEye(j, turn)) continue;
+          if (plPlace(j, turn) >= 0) { ko = PL.koNext; last = j; played = true; break; }
+        }
+      }
       // 2) 무작위(거부 샘플링)
       if (!played) {
         let att = 0; const maxAtt = PL.ec * 2 + 4;
@@ -512,6 +577,8 @@
         }
       }
       if (!played) { passes += 1; turn = opp; ko = -1; last = -1; continue; }
+      // RAVE용 AMAF 기록: 이 점에 이번 시뮬레이션에서 처음 둔 색만 남긴다
+      if (PL.amafGen[last] !== PL.amafG) { PL.amafGen[last] = PL.amafG; PL.amafColor[last] = turn; }
       passes = 0; turn = opp;
     }
     return plAreaWinner(size);
@@ -524,17 +591,26 @@
     const cfg = {
       priors: opts.priors !== false,
       restrict: opts.restrict !== false,
+      rave: opts.rave !== false,
     };
     const root = makeMctsNode(pos.board, pos.turn, pos.koKey || null, pos.lastMove || null, null, size, cfg);
+    materializeMoves(root);
     if (!root.untried.length) return null; // 둘 곳(자기 눈 제외)이 없으면 패스
-    // 루트 후보에서 "축으로 죽는" 수를 제거(대안이 있을 때만). 루트 한정이라 비용 미미.
+    // 루트 후보에서 "축으로 죽는" 수를 제거(대안이 있을 때만).
+    // 비용 상한 필수: 중반 접전에선 2활로 후보가 수십 개라 "후보 × 축읽기(최대 500노드
+    // × 보드복제)"가 수십 초로 폭발하고, 그 할당 폭풍이 V8 재최적화 루프까지 일으켜
+    // 한 수가 수십 분씩 걸렸다(19×19 ~100수 행 버그). prior 상위 40개·총 150ms까지만
+    // 검사하고 나머지는 통과시킨다 — 축 도주는 prior가 높아 상위에 몰리므로 손실 미미.
     if (root.untried.length > 1) {
       const kept = [];
       const keptPr = [];
+      const lt0 = Date.now();
       for (let i = 0; i < root.untried.length; i += 1) {
         const mv = root.untried[i];
-        const sim = applySim(root.board, mv[0], mv[1], root.turn);
-        if (sim && ladderDoomed(sim.board, mv[0], mv[1])) continue;
+        if (i < 40 && Date.now() - lt0 < 150) {
+          const sim = applySim(root.board, mv[0], mv[1], root.turn);
+          if (sim && ladderDoomed(sim.board, mv[0], mv[1])) continue;
+        }
         kept.push(mv);
         if (root.priors) keptPr.push(root.priors[i]);
       }
@@ -550,7 +626,11 @@
     while (iters < iterCap && (!useClock || Date.now() < deadline)) {
       iters += 1;
       let node = root;
-      while (node.ui >= node.untried.length && node.children.length) node = selectUct(node);
+      while (true) {
+        if (node.untried === null) materializeMoves(node);
+        if (node.ui < node.untried.length || !node.children.length) break;
+        node = selectUct(node, cfg.rave);
+      }
       if (node.ui < node.untried.length) {
         // prior 정렬 순(없으면 생성 순)으로 확장. prior는 가상 방문으로 심는다.
         const idx = node.priors ? node.ui : node.ui + Math.floor(Math.random() * (node.untried.length - node.ui));
@@ -563,14 +643,37 @@
         const sim = applySim(node.board, mv[0], mv[1], node.turn);
         const childKo = koKeyAfter(node.board, sim.board, sim.captured, mv[0], mv[1]);
         const child = makeMctsNode(sim.board, otherColor(node.turn), childKo, mv, node, size, cfg);
-        if (node.priors) { child.visits = PRIOR_N; child.wins = PRIOR_N * h; }
+        if (node.priors) {
+          child.visits = PRIOR_N; child.wins = PRIOR_N * h;
+          child.raveN = PRIOR_N; child.raveW = PRIOR_N * h;
+        }
         node.children.push(child);
         node = child;
       }
       const winner = mctsPlayout(node.board, node.turn, node.koKey, size, node.move);
+      if (cfg.rave) {
+        // 트리 경로에서 둔 수도 시뮬레이션의 일부 — 먼저 둔 수가 우선이므로 덮어쓴다
+        for (let n = node; n.parent; n = n.parent) {
+          const i = n.move[1] * size + n.move[0];
+          PL.amafGen[i] = PL.amafG;
+          PL.amafColor[i] = n.moverColor;
+        }
+      }
       for (let n = node; n; n = n.parent) {
         n.visits += 1;
         if (n.moverColor === winner) n.wins += 1;
+        if (cfg.rave) {
+          // RAVE: 이 노드 차례(n.turn)의 색이 시뮬 어딘가에서 둔 자리와 같은 수를 가진
+          // 형제들에 AMAF 통계를 나눠 준다("그 자리에 둔 대국은 이겼나").
+          const won = winner === n.turn ? 1 : 0;
+          for (const c of n.children) {
+            const i = c.move[1] * size + c.move[0];
+            if (PL.amafGen[i] === PL.amafG && PL.amafColor[i] === n.turn) {
+              c.raveN += 1;
+              c.raveW += won;
+            }
+          }
+        }
       }
     }
     let best = null;

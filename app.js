@@ -679,6 +679,11 @@
 
   // 축 읽기: 단수에 몰린 (gx,gy) 그룹이 도망쳐도 결국 잡히면 true.
   function ladderCaptured(board, gx, gy, depth) {
+    // 노드 예산: 활로 2개일 때 양쪽 추격을 모두 재귀해 최악 2^40으로 폭발할 수 있다.
+    // 초과 시 "안 잡힌다"로 후퇴(수를 남기는 쪽이 무해). ai-engine.js와 동일한 가드.
+    if (depth === 0) ladderCaptured.nodes = 0;
+    ladderCaptured.nodes += 1;
+    if (ladderCaptured.nodes > 500) return false;
     if (depth > 40) return false;
     const color = board[gy][gx];
     const opp = color === BLACK ? WHITE : BLACK;
