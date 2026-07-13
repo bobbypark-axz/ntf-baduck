@@ -2573,3 +2573,15 @@ input.name-input:focus {
 @media (prefers-reduced-motion: reduce) {
   .splash-board, .splash-spark, .splash-hint { animation: none; }
 }
+
+/* 시작 화면 하단 오픈소스 고지 (GPL 소스 제공 안내 — GNU Go) */
+.start-license {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.start-license a {
+  color: inherit;
+  text-decoration: underline;
+}

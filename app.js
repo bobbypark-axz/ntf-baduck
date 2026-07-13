@@ -1267,6 +1267,9 @@
           <button class="start-cta" data-start>${icon("play")} 대국 시작</button>
           <button class="start-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
         </div>
+        <p class="start-license">
+          19줄 AI는 <a href="third_party/gnugo/README.md" target="_blank" rel="noopener">GNU Go 3.8</a>(GPL)로 동작합니다 · 소스 제공
+        </p>
       </section>
     `;
   }
