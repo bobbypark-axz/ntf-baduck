@@ -1274,37 +1274,6 @@
     `;
   }
 
-  function colorOption(color) {
-    const isBlack = color === BLACK;
-    return `
-      <button class="opt color ${state.human === color ? "selected" : ""}" data-setting="human" data-value="${color}">
-        ${chip(color, 40)}
-        <b>${isBlack ? "흑 (선)" : "백 (후)"}</b>
-        <small>${isBlack ? "내가 먼저" : "AI가 먼저"}</small>
-      </button>
-    `;
-  }
-
-  function sizeOption(size) {
-    const meta = SIZE_COPY[size];
-    return `
-      <button class="opt size ${state.size === size ? "selected" : ""}" data-setting="size" data-value="${size}">
-        <b>${meta.title}</b>
-        <small>${meta.sub}</small>
-      </button>
-    `;
-  }
-
-  function difficultyOption(key) {
-    const meta = DIFFICULTY_COPY[key];
-    return `
-      <button class="opt row ${state.difficulty === key ? "selected" : ""}" data-setting="difficulty" data-value="${key}">
-        <span class="opt-text"><b>${meta.title}</b><small>${meta.sub}</small></span>
-        <span class="opt-radio"><i></i></span>
-      </button>
-    `;
-  }
-
   function seg(label, key, selected, options) {
     return `
       <div class="control">
@@ -2006,10 +1975,6 @@
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
-  }
-
-  function escapeAttr(value) {
-    return escapeHtml(value).replace(/`/g, "&#96;");
   }
 
   document.addEventListener("keydown", (event) => {
