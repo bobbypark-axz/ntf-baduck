@@ -1227,6 +1227,17 @@
     `;
   }
 
+  // 급수별 상대 소개 한 줄 (시작 화면 스테퍼)
+  function rankLabel(rank) {
+    if (rank >= 17) return "갓 배운 친구";
+    if (rank >= 15) return "규칙은 아는 입문자";
+    if (rank >= 12) return "동네 기원 새내기";
+    if (rank >= 9) return "취미 바둑 중수";
+    if (rank >= 6) return "동네 상수";
+    if (rank >= 3) return "동네 고수";
+    return "기원 최강자";
+  }
+
   // AI 표시명: 19×19 급수 대국은 "8급"처럼, 그 외엔 기존 난이도명
   function aiTitle() {
     return state.size === 19 && state.rank ? `${state.rank}급` : DIFFICULTY_COPY[state.difficulty].title;
@@ -1282,14 +1293,20 @@
             ${presets}
           </div>
           ${state.size === 19 ? `
-          <div class="rank-picker">
-            <div class="rank-head">
-              <span>AI 급수 <b class="rank-now">${state.rank}급</b></span>
-              <small>숫자가 작을수록 강해요</small>
-            </div>
-            <div class="rank-grid" role="group" aria-label="AI 급수 선택">
-              ${Array.from({ length: 18 }, (_, i) => 18 - i).map((r) => `
-                <button class="rank-chip ${state.rank === r ? "selected" : ""}" data-setting="rank" data-value="${r}" aria-label="${r}급">${r}</button>`).join("")}
+          <div class="rank-picker" role="group" aria-label="AI 급수 선택">
+            <div class="rank-head"><span>AI 상대</span><small>화살표로 급수 조절</small></div>
+            <div class="rank-stepper">
+              <button class="rank-arrow" data-setting="rank" data-value="${state.rank + 1}"
+                ${state.rank >= 18 ? "disabled" : ""} aria-label="한 급수 약하게">${icon("back")}</button>
+              <div class="rank-center">
+                <b class="rank-big">${state.rank}<small>급</small></b>
+                <span class="rank-desc">${rankLabel(state.rank)}</span>
+                <span class="rank-gauge" aria-hidden="true">
+                  ${Array.from({ length: 9 }, (_, i) => `<i class="${i < Math.max(1, Math.round(((19 - state.rank) / 18) * 9)) ? "on" : ""}"></i>`).join("")}
+                </span>
+              </div>
+              <button class="rank-arrow next" data-setting="rank" data-value="${state.rank - 1}"
+                ${state.rank <= 1 ? "disabled" : ""} aria-label="한 급수 강하게">${icon("back")}</button>
             </div>
           </div>` : ""}
           <div class="seg-presets seg-colors" role="group" aria-label="내 색">

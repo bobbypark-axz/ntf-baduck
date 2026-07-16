@@ -1981,33 +1981,59 @@ kbd {
   font-size: 13px;
   color: var(--black-48);
 }
-.rank-head .rank-now { margin-left: 4px; font-size: 15px; font-weight: 700; color: var(--ink, #171719); }
 .rank-head small { font-size: 11px; color: var(--faint, #8b8c91); }
-.rank-grid {
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 3px;
+.rank-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 8px;
 }
-.rank-chip {
-  height: 34px;
+.rank-arrow {
+  flex: none;
+  width: 44px;
+  height: 44px;
   border: 0;
-  border-radius: var(--btn-radius); /* Box R8 — seg-preset과 동일 */
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--black-48);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink, #171719);
+  box-shadow: 0 3px 10px -3px rgba(23,23,23,.22);
   cursor: pointer;
-  transition: background .15s, box-shadow .15s, color .15s;
+  display: grid;
+  place-items: center;
+  transition: transform .12s, opacity .15s;
 }
-.rank-chip:hover { background: rgba(255,255,255,.6); }
-.rank-chip.selected {
-  background: var(--blue, #1e84ff);
-  color: #fff;
-  font-weight: 700;
-  box-shadow: 0 3px 10px -3px rgba(30,132,255,.55);
+.rank-arrow svg { width: 22px; height: 22px; }
+.rank-arrow.next svg { transform: scaleX(-1); }
+.rank-arrow:active:not(:disabled) { transform: scale(.92); }
+.rank-arrow:disabled { opacity: .3; cursor: default; box-shadow: none; background: transparent; }
+.rank-arrow:focus-visible { outline: 2px solid var(--blue, #1e84ff); outline-offset: 2px; }
+.rank-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
 }
-.rank-chip:focus-visible { outline: 2px solid var(--blue, #1e84ff); outline-offset: 2px; }
+.rank-big {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  color: var(--ink, #171719);
+  font-variant-numeric: tabular-nums;
+}
+.rank-big small { font-size: 18px; font-weight: 700; margin-left: 1px; }
+.rank-desc { font-size: 13px; color: var(--black-48); }
+.rank-gauge { display: flex; gap: 4px; margin-top: 3px; }
+.rank-gauge i {
+  width: 14px;
+  height: 5px;
+  border-radius: 3px;
+  background: #d9dce1;
+  transition: background .2s;
+}
+.rank-gauge i.on { background: var(--blue, #1e84ff); }
 .seg-stone { width: 22px; height: 22px; border-radius: 50%; margin-bottom: 2px; }
 .seg-stone.black, .seg-stone.white { box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .start-view.simple .start-cta {
