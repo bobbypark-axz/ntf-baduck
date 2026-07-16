@@ -1963,6 +1963,48 @@ kbd {
 
 /* 내 색 세그먼트 (2칸) */
 .seg-colors { grid-template-columns: repeat(2, 1fr); }
+
+/* 19×19 AI 급수 선택 (18급 → 1급, 숫자가 작을수록 강함) */
+.rank-picker {
+  padding: 10px 8px 8px;
+  background: #eceef1;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rank-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 6px;
+  font-size: 13px;
+  color: var(--black-48);
+}
+.rank-head small { font-size: 11px; color: var(--faint, #8b8c91); }
+.rank-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.rank-chip {
+  padding: 8px 0;
+  border: 0;
+  border-radius: var(--btn-radius); /* Box R8 — seg-preset과 동일 */
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--black-48);
+  cursor: pointer;
+  transition: background .15s, box-shadow .15s;
+}
+.rank-chip.selected {
+  background: #fff;
+  color: var(--ink, #171719);
+  font-weight: 700;
+  box-shadow: 0 3px 10px -3px rgba(23,23,23,.22);
+}
+.rank-chip:focus-visible { outline: 2px solid var(--blue, #1e84ff); outline-offset: 2px; }
 .seg-stone { width: 22px; height: 22px; border-radius: 50%; margin-bottom: 2px; }
 .seg-stone.black, .seg-stone.white { box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .start-view.simple .start-cta {
@@ -2073,7 +2115,44 @@ kbd {
   font-size: 11px;
   color: var(--muted);
 }
-.start-license a {
+.license-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
   color: inherit;
   text-decoration: underline;
+  cursor: pointer;
+}
+
+/* 라이선스 팝업 — GPL 출처·소스 제공 안내 */
+.modal.license { text-align: left; }
+.modal.license h2 { font: var(--font-body-1); font-weight: 700; color: var(--text-88); }
+.modal.license p { font: var(--font-body-3); }
+.license-links {
+  list-style: none;
+  margin: 16px 0 22px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.license-links a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text-88);
+  font: var(--font-body-3);
+  font-weight: 600;
+  text-decoration: none;
+}
+.license-links a:hover { border-color: var(--blue); color: var(--blue-dark); }
+.license-links a small {
+  color: var(--muted);
+  font: var(--font-label);
+  font-weight: 400;
+  white-space: nowrap;
 }

@@ -27,7 +27,7 @@ const state = {};
 eval([
   "cloneBoard", "inBounds", "neighbors", "getGroup", "boardKey",
   "isLegal", "legalOn", "legalMoves", "isOwnEye",
-  "chooseMove", "evaluateMove", "starPointBonus", "starPoints",
+  "chooseMove", "rankSpecNow", "evaluateMove", "starPointBonus", "starPoints",
   "applySim", "bestReplyScore", "bestReplyMove", "ladderPenalty", "ladderCaptured",
 ].map(extract).join("\n"));
 

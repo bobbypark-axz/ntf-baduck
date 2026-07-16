@@ -47,6 +47,7 @@
     human: BLACK,
     ai: WHITE,
     difficulty: "easy",
+    rank: 8, // 19×19 AI 급수(1~18급, 1이 최강) — 기존 "고급"(GNU Go 레벨 10)과 같은 8급이 기본
     theme: "wood",
     showCoords: true,
     showLast: true,
@@ -83,6 +84,7 @@
     endingNotice: "",
     aiProposing: false,
     tutorialOpen: false,
+    licenseOpen: false,
     splashDone: false, // 첫 진입 시 스플래시 노출 (세션당 1회)
   };
 
@@ -490,8 +492,14 @@
 
   function mctsOptions() {
     const opts = { budgetMs: MCTS_BUDGET_MS[state.size] || 2500 };
+    if (state.size === 19 && state.rank) opts.rank = state.rank; // 워커 급수 라우팅(gnugo 레벨/kata 약화)
     if (state.mctsIters) opts.maxIters = state.mctsIters; // 검증 하네스용: 시계 대신 반복 예산
     return opts;
+  }
+
+  // 19×19 급수 대국에서 현재 급수의 엔진 사양(없으면 null → 기존 난이도 경로)
+  function rankSpecNow() {
+    return state.size === 19 && state.rank && globalThis.BadukAI ? BadukAI.rankSpec(state.rank) : null;
   }
 
   function mctsPosition() {
@@ -551,7 +559,12 @@
     options = options || {}; // 기본값 인자를 안 쓰는 이유: tools/ai-check.js가 중괄호 매칭으로 함수를 추출함
     const moves = legalMoves();
     if (!moves.length) return null;
-    if (state.difficulty === "easy") {
+    // 19×19 급수 대국의 봇 급수(18~16급)는 난이도 대신 급수 사양을 따른다.
+    const botMode = (() => {
+      const spec = rankSpecNow();
+      return spec && spec.engine === "bot" ? spec.mode : null;
+    })();
+    if (state.difficulty === "easy" || botMode === "easy") {
       const filtered = moves.filter(([x, y]) => !isOwnEye(x, y));
       const pool = filtered.length ? filtered : moves;
       return pool[Math.floor(Math.random() * pool.length)];
@@ -559,15 +572,18 @@
 
     // 고급: MCTS로 판세까지 읽는다(전 판 크기). 패스(null)·강제 스킵 시 아래 휴리스틱 폴백.
     // UI 경로는 chooseMoveAsync가 워커로 돌리므로 여기 동기 호출은 폴백·하네스 전용.
-    if (state.difficulty === "hard" && !state.noMcts && !options.skipMcts) {
+    // 봇 급수는 점수표 전용이라 MCTS를 타지 않는다.
+    if (state.difficulty === "hard" && !botMode && !state.noMcts && !options.skipMcts) {
       const mv = mctsMove();
       if (mv) return mv;
     }
 
-    const sample = state.difficulty === "hard" ? moves : moves.filter((_, i) => i % 2 === 0 || moves.length < 120);
+    // deep = 점수표 + 3수 읽기(기존 "고급 폴백"), 아니면 점수표만(기존 "중급")
+    const deepMode = botMode ? botMode === "deep" : state.difficulty === "hard";
+    const sample = deepMode ? moves : moves.filter((_, i) => i % 2 === 0 || moves.length < 120);
     const scored = sample.map((move) => [evaluateMove(move[0], move[1]) + Math.random() * 0.25, move]);
     scored.sort((a, b) => b[0] - a[0]);
-    if (state.difficulty !== "hard") {
+    if (!deepMode) {
       return scored[0][0] < -8 ? null : scored[0][1];
     }
 
@@ -592,7 +608,10 @@
   }
 
   // 고급의 MCTS만 워커(비동기)로 돌리고, 나머지는 기존 동기 경로를 그대로 쓴다.
+  // 19×19 급수 대국: 봇 급수(18~16급)는 동기 점수표, 그 위는 워커(gnugo/kata 라우팅).
   function chooseMoveAsync() {
+    const spec = rankSpecNow();
+    if (spec && spec.engine === "bot") return Promise.resolve(chooseMove());
     if (state.difficulty !== "hard" || state.noMcts) return Promise.resolve(chooseMove());
     return mctsMoveAsync().then((move) => move || chooseMove({ skipMcts: true }));
   }
@@ -801,6 +820,7 @@
     state.human = options.human || state.human;
     state.ai = state.human === BLACK ? WHITE : BLACK;
     state.difficulty = options.difficulty || state.difficulty;
+    if (options.rank) state.rank = Number(options.rank);
     state.theme = options.theme || state.theme;
     if (Object.prototype.hasOwnProperty.call(options, "started")) state.started = options.started;
     if (Object.prototype.hasOwnProperty.call(options, "mobileStarted")) {
@@ -1073,7 +1093,7 @@
   function playerCard(color) {
     const isAi = color === state.ai;
     const active = state.turn === color && !state.ended;
-    const name = isAi ? `AI · ${DIFFICULTY_COPY[state.difficulty].title}` : escapeHtml(state.playerName || "나");
+    const name = isAi ? `AI · ${aiTitle()}` : escapeHtml(state.playerName || "나");
     const captured = state.captures[color];
     const oppColor = color === BLACK ? WHITE : BLACK;
     const trayChips = Array.from({ length: Math.min(captured, 8) }, () => chip(oppColor, 12)).join("");
@@ -1207,6 +1227,11 @@
     `;
   }
 
+  // AI 표시명: 19×19 급수 대국은 "8급"처럼, 그 외엔 기존 난이도명
+  function aiTitle() {
+    return state.size === 19 && state.rank ? `${state.rank}급` : DIFFICULTY_COPY[state.difficulty].title;
+  }
+
   const START_PRESETS = [
     { size: 5,  difficulty: "easy",   label: "입문", spec: "5 × 5",   time: "약 1분" },
     { size: 9,  difficulty: "medium", label: "보통", spec: "9 × 9",   time: "약 5분" },
@@ -1256,6 +1281,17 @@
           <div class="seg-presets" role="group" aria-label="난이도와 판 크기">
             ${presets}
           </div>
+          ${state.size === 19 ? `
+          <div class="rank-picker">
+            <div class="rank-head">
+              <span>AI 급수</span>
+              <small>숫자가 작을수록 강해요</small>
+            </div>
+            <div class="rank-grid" role="group" aria-label="AI 급수 선택">
+              ${Array.from({ length: 18 }, (_, i) => 18 - i).map((r) => `
+                <button class="rank-chip ${state.rank === r ? "selected" : ""}" data-setting="rank" data-value="${r}">${r}급</button>`).join("")}
+            </div>
+          </div>` : ""}
           <div class="seg-presets seg-colors" role="group" aria-label="내 색">
             <button class="seg-preset ${state.human === BLACK ? "selected" : ""}" data-setting="human" data-value="${BLACK}">
               <span class="seg-stone black"></span><b>흑</b><small>내가 먼저</small>
@@ -1267,7 +1303,7 @@
           <button class="start-cta" data-start>${icon("play")} 대국 시작</button>
           <button class="start-secondary" data-tutorial-open>${icon("bulb")} 규칙 보기</button>
           <p class="start-license">
-            19줄 AI는 <a href="third_party/gnugo/README.md" target="_blank" rel="noopener">GNU Go 3.8</a>(GPL)로 동작합니다 · 소스 제공
+            19줄 AI는 GNU Go 3.8(GPL)·KataGo(MIT)로 동작합니다 · <button type="button" class="license-link" data-license-open>출처·소스 보기</button>
           </p>
         </div>
       </section>
@@ -1348,6 +1384,32 @@
           <div class="modal-actions">
             <button class="btn neutral" data-confirm-cancel>${c.cancel || "취소"}</button>
             <button class="btn ${c.danger ? "danger-fill" : "primary"} icon" data-confirm-ok>${c.confirm}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function licenseModal() {
+    if (!state.licenseOpen) return "";
+    const repo = "https://github.com/bobbypark-axz/ntf-baduck";
+    return `
+      <div class="modal-scrim" data-license-close>
+        <div class="modal license" role="dialog" aria-modal="true" aria-labelledby="license-title">
+          <h2 id="license-title">오픈소스 라이선스</h2>
+          <p class="muted">
+            19줄 AI는 급수에 따라 <b>GNU Go 3.8</b>(WebAssembly, GPL)과
+            <b>KataGo</b> 신경망(TensorFlow.js, MIT)을 사용합니다.
+            각 라이선스 조건에 따라 원본과 전체 대응 소스를 아래에서 받을 수 있어요.
+          </p>
+          <ul class="license-links">
+            <li><a href="https://ftp.gnu.org/gnu/gnugo/gnugo-3.8.tar.gz" target="_blank" rel="noopener">GNU Go 3.8 원본 소스 <small>gnu.org · tar.gz</small></a></li>
+            <li><a href="https://katagotraining.org/network_license/" target="_blank" rel="noopener">KataGo 신경망·라이선스 <small>katagotraining.org</small></a></li>
+            <li><a href="${repo}/tree/main/third_party" target="_blank" rel="noopener">이 앱의 수정 패치·빌드/변환 문서 <small>GitHub</small></a></li>
+            <li><a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank" rel="noopener">라이선스 전문 <small>GPL-3.0 · gnu.org</small></a></li>
+          </ul>
+          <div class="modal-actions">
+            <button class="btn primary" data-license-close>확인</button>
           </div>
         </div>
       </div>
@@ -1641,11 +1703,10 @@
   }
 
   function gameTopMeta() {
-    const meta = DIFFICULTY_COPY[state.difficulty];
     return `
       <div class="meta-pills">
         <span class="pill blue">${state.size} x ${state.size}</span>
-        <span class="pill">${meta.title}</span>
+        <span class="pill">${aiTitle()}</span>
         <span class="pill"><i class="dot ${state.ended ? "ended" : "live"}"></i>${state.ended ? "종료" : "진행 중"}</span>
       </div>
     `;
@@ -1670,7 +1731,7 @@
         <header class="mobile-game-header">
           <button class="mobile-icon-btn" data-back-home aria-label="홈">${icon("back")}</button>
           <div class="mobile-game-title">
-            <strong>${DIFFICULTY_COPY[state.difficulty].title}</strong>
+            <strong>${aiTitle()}</strong>
             <span>${state.size} x ${state.size} · ${state.moveNumber}수</span>
           </div>
           <button class="mobile-icon-btn" data-sheet-open aria-label="메뉴">${icon("more")}</button>
@@ -1711,6 +1772,7 @@
         ${confirmModal()}
         ${resultModal()}
         ${tutorialView()}
+        ${licenseModal()}
       </div>
     `;
     bind();
@@ -1747,7 +1809,7 @@
       return;
     }
     const node = target.closest(
-      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close],[data-splash-start]"
+      "[data-undo],[data-pass],[data-resign],[data-hint],[data-start],[data-rematch],[data-restart],[data-back-home],[data-sheet-open],[data-sheet-close],[data-confirm-cancel],[data-confirm-ok],[data-close-result],[data-close-modal],[data-resume-play],[data-fix-dead],[data-setting],[data-propose-end],[data-mark-cancel],[data-mark-confirm],[data-ai-end-accept],[data-ai-end-decline],[data-tutorial-open],[data-tutorial-close],[data-license-open],[data-license-close],[data-splash-start]"
     );
     if (!node || node.disabled) return;
     const ds = node.dataset;
@@ -1769,6 +1831,12 @@
     else if ("splashStart" in ds) info = { name: "splash-start" };
     else if ("tutorialOpen" in ds) info = { name: "tutorial-open" };
     else if ("tutorialClose" in ds) info = { name: "tutorial-close" };
+    else if ("licenseOpen" in ds) info = { name: "license-open" };
+    else if ("licenseClose" in ds) {
+      // 링크 등 팝업 내부 클릭은 무시 — 스크림 배경이나 확인 버튼만 닫기
+      if (target.closest(".modal") && !target.closest("button[data-license-close]")) return;
+      info = { name: "license-close" };
+    }
     else if ("sheetOpen" in ds) info = { name: "sheet-open" };
     else if ("sheetClose" in ds) {
       // Close only from the scrim backdrop or an explicit close control (X button);
@@ -1828,6 +1896,8 @@
     if (name === "splash-start") { dismissSplash(); return; }
     if (name === "tutorial-open") { state.tutorialOpen = true; render(); return; }
     if (name === "tutorial-close") { state.tutorialOpen = false; render(); return; }
+    if (name === "license-open") { state.licenseOpen = true; render(); return; }
+    if (name === "license-close") { state.licenseOpen = false; render(); return; }
     if (name === "start") {
       newGame({ human: state.human, difficulty: state.difficulty, started: true, mobileStarted: true });
       return;
@@ -1928,6 +1998,9 @@
         } else {
           apply();
         }
+      } else if (key === "rank") {
+        state.rank = Number(value);
+        render();
       } else if (key === "difficulty") {
         state.difficulty = value;
         render();

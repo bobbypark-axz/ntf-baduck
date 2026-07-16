@@ -684,5 +684,31 @@
     return best ? best.move : null;
   }
 
-  globalThis.BadukAI = { mctsSearch };
+  // ── 급수(1~18급) → 엔진 매핑 (19×19 전용, 앱·워커 공용 단일 출처) ──
+  // 18~16급: 메인 스레드 점수표 봇 / 15~8급: GNU Go 레벨 / 7~1급: KataGo 정책망(온도 약화).
+  // GNU Go 레벨 10 ≈ 8~10급 실측(DIFFICULTY.md), KataGo 정책망 최강 ≈ 단급 초입.
+  // 중간 단계 파라미터는 근사치 — 자체대국 캘리브레이션으로 다듬는다.
+  const RANK_SPECS = {
+    18: { engine: "bot", mode: "easy" },
+    17: { engine: "bot", mode: "medium" },
+    16: { engine: "bot", mode: "deep" }, // 점수표 + 3수 읽기
+    15: { engine: "gnugo", level: 1 },
+    14: { engine: "gnugo", level: 2 },
+    13: { engine: "gnugo", level: 3 },
+    12: { engine: "gnugo", level: 4 },
+    11: { engine: "gnugo", level: 5 },
+    10: { engine: "gnugo", level: 6 },
+    9: { engine: "gnugo", level: 8 },
+    8: { engine: "gnugo", level: 10 },
+    7: { engine: "kata", topK: 12, temp: 1.5 },
+    6: { engine: "kata", topK: 10, temp: 1.2 },
+    5: { engine: "kata", topK: 8, temp: 1.0 },
+    4: { engine: "kata", topK: 6, temp: 0.8 },
+    3: { engine: "kata", topK: 4, temp: 0.65 },
+    2: { engine: "kata", topK: 3, temp: 0.5 },
+    1: { engine: "kata", topK: 1, temp: 0 },
+  };
+  function rankSpec(rank) { return RANK_SPECS[rank] || null; }
+
+  globalThis.BadukAI = { mctsSearch, rankSpec };
 })();
