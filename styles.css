@@ -1981,28 +1981,31 @@ kbd {
   font-size: 13px;
   color: var(--black-48);
 }
+.rank-head .rank-now { margin-left: 4px; font-size: 15px; font-weight: 700; color: var(--ink, #171719); }
 .rank-head small { font-size: 11px; color: var(--faint, #8b8c91); }
 .rank-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 3px;
 }
 .rank-chip {
-  padding: 8px 0;
+  height: 34px;
   border: 0;
   border-radius: var(--btn-radius); /* Box R8 — seg-preset과 동일 */
   background: transparent;
   font-size: 13px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--black-48);
   cursor: pointer;
-  transition: background .15s, box-shadow .15s;
+  transition: background .15s, box-shadow .15s, color .15s;
 }
+.rank-chip:hover { background: rgba(255,255,255,.6); }
 .rank-chip.selected {
-  background: #fff;
-  color: var(--ink, #171719);
+  background: var(--blue, #1e84ff);
+  color: #fff;
   font-weight: 700;
-  box-shadow: 0 3px 10px -3px rgba(23,23,23,.22);
+  box-shadow: 0 3px 10px -3px rgba(30,132,255,.55);
 }
 .rank-chip:focus-visible { outline: 2px solid var(--blue, #1e84ff); outline-offset: 2px; }
 .seg-stone { width: 22px; height: 22px; border-radius: 50%; margin-bottom: 2px; }

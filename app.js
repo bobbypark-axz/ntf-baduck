@@ -1284,12 +1284,12 @@
           ${state.size === 19 ? `
           <div class="rank-picker">
             <div class="rank-head">
-              <span>AI 급수</span>
+              <span>AI 급수 <b class="rank-now">${state.rank}급</b></span>
               <small>숫자가 작을수록 강해요</small>
             </div>
             <div class="rank-grid" role="group" aria-label="AI 급수 선택">
               ${Array.from({ length: 18 }, (_, i) => 18 - i).map((r) => `
-                <button class="rank-chip ${state.rank === r ? "selected" : ""}" data-setting="rank" data-value="${r}">${r}급</button>`).join("")}
+                <button class="rank-chip ${state.rank === r ? "selected" : ""}" data-setting="rank" data-value="${r}" aria-label="${r}급">${r}</button>`).join("")}
             </div>
           </div>` : ""}
           <div class="seg-presets seg-colors" role="group" aria-label="내 색">
