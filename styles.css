@@ -1795,6 +1795,10 @@ kbd {
     padding: 12px 8px calc(16px + env(safe-area-inset-bottom));   /* 좌우 8px — 판을 넓게(터치 편의) */
   }
 
+  /* 세로 레이아웃(폴드 펼침 884px 등 721~980 구간)에선 판이 좌우 끝까지 붙어
+     좌표 라벨이 화면 밖으로 잘린다 → ≤720과 동일하게 좌표 숨김 */
+  .app.playing .coords { display: none; }
+
   /* 플레이어 카드만 상단에, 수순 로그는 메뉴로 */
   .app.playing .left {
     order: 1;
