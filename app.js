@@ -28,8 +28,6 @@
     hard:   { title: "고급", sub: "더 오래 생각해요", icon: "icons/swords.svg",  tone: "red" },
   };
   const SIZE_COPY = {
-    5:  { title: "초고속 한 판", sub: "5 x 5 · 1분",  time: 2 * 60 },
-    9:  { title: "빠른 한 판",   sub: "9 x 9 · 5분",  time: 5 * 60 },
     19: { title: "정식판",       sub: "19 x 19 · 20분", time: 20 * 60 },
   };
   function timeBudget(size) {
@@ -41,12 +39,12 @@
   }
 
   const state = {
-    size: 5,
+    size: 19, // 19×19 단일 판(입문 5·보통 9 제거됨)
     board: [],
     turn: BLACK,
     human: BLACK,
     ai: WHITE,
-    difficulty: "easy",
+    difficulty: "hard",
     rank: 8, // 19×19 AI 급수(1~18급, 1이 최강) — 기존 "고급"(GNU Go 레벨 10)과 같은 8급이 기본
     theme: "wood",
     showCoords: true,
@@ -1243,12 +1241,6 @@
     return state.size === 19 && state.rank ? `${state.rank}급` : DIFFICULTY_COPY[state.difficulty].title;
   }
 
-  const START_PRESETS = [
-    { size: 5,  difficulty: "easy",   label: "입문", spec: "5 × 5",   time: "약 1분" },
-    { size: 9,  difficulty: "medium", label: "보통", spec: "9 × 9",   time: "약 5분" },
-    { size: 19, difficulty: "hard",   label: "정식", spec: "19 × 19", time: "약 20분" },
-  ];
-
   function splashView() {
     return `
       <section class="splash-view" aria-label="바둑 시작" data-splash-start>
@@ -1277,10 +1269,6 @@
   }
 
   function startView() {
-    const presets = START_PRESETS.map((p) => `
-      <button class="seg-preset ${state.size === p.size ? "selected" : ""}" data-setting="preset" data-value="${p.size}">
-        <b>${p.label}</b><small>${p.spec}</small>
-      </button>`).join("");
     return `
       <section class="start-view simple" aria-label="대국 시작 화면">
         <div class="start-hero-block">
@@ -1289,10 +1277,6 @@
           <p class="game-tagline">AI와 두는 한 판.<br>집을 더 많이 차지하면 이겨요.</p>
         </div>
         <div class="start-controls">
-          <div class="seg-presets" role="group" aria-label="난이도와 판 크기">
-            ${presets}
-          </div>
-          ${state.size === 19 ? `
           <div class="rank-picker" role="group" aria-label="AI 급수 선택">
             <div class="rank-head"><span>AI 상대</span><small>화살표로 급수 조절</small></div>
             <div class="rank-stepper">
@@ -1308,7 +1292,7 @@
               <button class="rank-arrow next" data-setting="rank" data-value="${state.rank - 1}"
                 ${state.rank <= 1 ? "disabled" : ""} aria-label="한 급수 강하게">${icon("back")}</button>
             </div>
-          </div>` : ""}
+          </div>
           <div class="seg-presets seg-colors" role="group" aria-label="내 색">
             <button class="seg-preset ${state.human === BLACK ? "selected" : ""}" data-setting="human" data-value="${BLACK}">
               <span class="seg-stone black"></span><b>흑</b><small>내가 먼저</small>
@@ -1994,27 +1978,6 @@
             newGame({ size: state.size, started: false, mobileStarted: false });
           }
         }
-      } else if (key === "preset") {
-        const preset = START_PRESETS.find((p) => p.size === Number(value)) || START_PRESETS[0];
-        const apply = () => {
-          newGame({
-            size: preset.size,
-            difficulty: preset.difficulty,
-            human: state.human,
-            started: state.started,
-            mobileStarted: state.started,
-          });
-        };
-        if (state.started && state.moveNumber > 0 && !state.ended) {
-          askConfirm({
-            title: "난이도를 바꿀까요?",
-            body: "지금까지의 대국이 사라지고 새 판으로 시작해요.",
-            confirm: "바꾸고 새로 시작",
-            onConfirm: apply,
-          });
-        } else {
-          apply();
-        }
       } else if (key === "rank") {
         state.rank = Number(value);
         render();
@@ -2109,6 +2072,6 @@
     state.resultDismissed = false;
   }
 
-  newGame({ human: BLACK, size: 9, difficulty: "easy", started: false, mobileStarted: false });
+  newGame({ human: BLACK, size: 19, difficulty: "hard", started: false, mobileStarted: false });
   startTimerLoop();
 })();
