@@ -144,7 +144,7 @@
   border-radius: 10px;
 }
 .board-shell {
-  max-width: 400px;
+  max-width: 560px;
 }
 .board,
 .board-bg {
@@ -178,7 +178,7 @@
     padding: 0 10px calc(14px + env(safe-area-inset-bottom));
   }
   .board-shell {
-    max-width: 400px;
+    max-width: min(94vw, 520px);
   }
   .actions .btn {
     min-height: 56px;
@@ -526,7 +526,7 @@ h3 {
 }
 .board-shell {
   width: 100%;
-  max-width: 400px; /* 디자인 스펙: 메인 게임판만 400px로 제한·중앙 정렬 (이중 스크롤 방지) */
+  max-width: 560px; /* 19×19 단일 판 — 중앙 컬럼이 허용하는 만큼 크게 (칸당 ~29px) */
   margin-left: auto;
   margin-right: auto;
   aspect-ratio: 1;
@@ -1778,13 +1778,13 @@ kbd {
    파일 곳곳의 미디어쿼리 오버라이드를 이기도록 맨 끝에서 한 번 고정.
    ---------------------------------------------------------------- */
 .board-shell {
-  max-width: 400px !important;
+  max-width: 560px !important; /* 19×19 단일 판 — 판을 크게 (구 400px, 5·9줄 시절 제한) */
   margin-left: auto !important;
   margin-right: auto !important;
 }
 .ending-banner,
 .marking-actions {
-  max-width: 400px !important;
+  max-width: 560px !important; /* 판 폭과 정렬 */
   margin-left: auto !important;
   margin-right: auto !important;
 }
@@ -1826,8 +1826,8 @@ kbd {
     margin: 0;
   }
   .app.playing .stage .board-shell {
-    width: min(400px, 100%) !important;       /* 게임판 max 400 · 중앙 */
-    max-width: min(400px, 100%) !important;
+    width: min(94vw, 520px) !important;       /* 게임판 · 화면 폭에 맞춰 크게 · 중앙 */
+    max-width: min(94vw, 520px) !important;
     height: auto;
     aspect-ratio: 1 / 1;
     margin: 0 auto !important;
@@ -1836,7 +1836,7 @@ kbd {
   .app.playing .stage .actions,
   .app.playing .stage .marking-actions {
     width: 100%;
-    max-width: 400px;
+    max-width: min(94vw, 520px);
     margin-left: auto;
     margin-right: auto;
   }
