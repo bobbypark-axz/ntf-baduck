@@ -5,7 +5,6 @@
 //  2) 자체 대국: 고급 vs 중급 승률 (9×9, 흑백 교대, 코미 6.5)
 //
 // app.js는 DOM에 묶인 IIFE라 import할 수 없어, 순수 함수를 문자열로 추출해 실행한다.
-// 자세한 배경: DIFFICULTY.md
 const fs = require("fs");
 const path = require("path");
 const src = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
