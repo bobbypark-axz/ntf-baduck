@@ -532,6 +532,8 @@ h3 {
   aspect-ratio: 1;
   position: relative;
   margin-top: 18px;
+  touch-action: manipulation; /* 판 영역 더블탭 확대 방지(핀치 줌 유지) */
+  -webkit-touch-callout: none; /* 길게 눌러도 iOS 이미지 저장 팝업 안 뜨게 */
 }
 .coords {
   position: absolute;
@@ -680,6 +682,8 @@ h3 {
   background: transparent;
   padding: 0;
   z-index: 4;
+  touch-action: manipulation; /* 착점 빠른/더블 탭 시 브라우저 더블탭 확대 방지(핀치 줌은 유지) */
+  -webkit-tap-highlight-color: transparent;
 }
 .hit:focus-visible {
   outline: 2px solid var(--blue);
