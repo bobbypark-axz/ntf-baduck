@@ -1,0 +1,145 @@
+2026-07-20 11:28:32+0900: Running with following config:
+allowResignation = true
+analysisIgnorePreRootHistory = false
+chosenMovePrune = 0
+chosenMoveSubtract = 0
+chosenMoveTemperature = 0.70
+chosenMoveTemperatureEarly = 0.85
+chosenMoveTemperatureHalflife = 80
+chosenMoveTemperatureOnlyBelowProb = 0.01
+delayMoveMax = 10.0
+delayMoveScale = 2.0
+dynamicScoreUtilityFactor = 0.00
+humanSLChosenMoveIgnorePass = true
+humanSLChosenMovePiklLambda = 100000000
+humanSLChosenMoveProp = 1.0
+humanSLCpuctExploration = 0.50
+humanSLCpuctPermanent = 0.2
+humanSLOppExploreProbWeightful = 0.0
+humanSLOppExploreProbWeightless = 0.0
+humanSLPlaExploreProbWeightful = 0.0
+humanSLPlaExploreProbWeightless = 0.0
+humanSLProfile = preaz_5k
+humanSLRootExploreProbWeightful = 0.0
+humanSLRootExploreProbWeightless = 0.0
+ignorePreRootHistory = false
+lagBuffer = 1.0
+logAllGTPCommunication = true
+logDir = gtp_logs
+logSearchInfo = true
+logSearchInfoForChosenMove = false
+logToStderr = false
+maxVisits = 40
+nnCacheSizePowerOfTwo = 17
+nnMutexPoolSizePowerOfTwo = 14
+numSearchThreads = 1
+resignConsecTurns = 20
+resignMinMovesPerBoardArea = 0.4
+resignMinScoreDifference = 40
+resignThreshold = -0.99
+rootNumSymmetriesToSample = 2
+rules = japanese
+staticScoreUtilityFactor = 0.30
+subtreeValueBiasFactor = 0.0
+useLcbForSelection = false
+useNoisePruning = false
+useUncertainty = false
+winLossUtilityFactor = 1.0
+
+2026-07-20 11:28:32+0900: GTP Engine starting...
+2026-07-20 11:28:32+0900: KataGo v1.16.5
+2026-07-20 11:28:32+0900: Using Japanese rules initially, unless GTP/GUI overrides this
+2026-07-20 11:28:32+0900: Using 1 CPU thread(s) for search
+2026-07-20 11:28:32+0900: nnRandSeed0 = 2646607882393158414
+2026-07-20 11:28:32+0900: After dedups: nnModelFile0 = /opt/homebrew/Cellar/katago/1.16.5/share/katago/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz useFP16 auto useNHWC auto
+2026-07-20 11:28:32+0900: Initializing neural net buffer to be size 19 * 19 exactly
+2026-07-20 11:28:33+0900: Loaded neural net with nnXLen 19 nnYLen 19
+2026-07-20 11:28:33+0900: nnRandSeed0 = 6678460573667707144
+2026-07-20 11:28:33+0900: After dedups: nnModelFile0 = /private/tmp/claude-501/-Users-bobby-axz-pc-Desktop-Projects-NTF-Baduck/787d1c5b-da75-4aa6-862c-7c361a3dbf48/scratchpad/humansl/b18c384nbt-humanv0.bin.gz useFP16 auto useNHWC auto
+2026-07-20 11:28:33+0900: Initializing neural net buffer to be size 19 * 19 exactly
+2026-07-20 11:28:33+0900: Loaded human SL net with nnXLen 19 nnYLen 19
+2026-07-20 11:28:33+0900: Initializing board with boardXSize 19 boardYSize 19
+2026-07-20 11:28:33+0900: Loaded config /opt/homebrew/Cellar/katago/1.16.5/share/katago/configs/gtp_human5k_example.cfg
+2026-07-20 11:28:33+0900: Loaded model /opt/homebrew/Cellar/katago/1.16.5/share/katago/kata1-b18c384nbt-s9996604416-d4316597426.bin.gz
+2026-07-20 11:28:33+0900: Loaded human SL model /private/tmp/claude-501/-Users-bobby-axz-pc-Desktop-Projects-NTF-Baduck/787d1c5b-da75-4aa6-862c-7c361a3dbf48/scratchpad/humansl/b18c384nbt-humanv0.bin.gz
+2026-07-20 11:28:33+0900: Model name: kata1-b18c384nbt-s9996604416-d4316597426
+2026-07-20 11:28:33+0900: Human SL model name: b18c384nbt-humanv0
+2026-07-20 11:28:33+0900: GTP ready, beginning main protocol loop
+2026-07-20 11:28:33+0900: Controller: boardsize 19
+2026-07-20 11:28:33+0900: = 
+2026-07-20 11:28:33+0900: Controller: komi 6.5
+2026-07-20 11:28:33+0900: = 
+2026-07-20 11:28:33+0900: Controller: genmove b
+2026-07-20 11:28:40+0900: MoveNum: 0 HASH: CDCBC1F514D7E680FACD226074256633
+   A B C D E F G H J K L M N O P Q R S T
+19 . . . . . . . . . . . . . . . . . . .
+18 . . . . . . . . . . . . . . . . . . .
+17 . . . . . . . . . . . . . . . . . . .
+16 . . . . . . . . . . . . . . . @ . . .
+15 . . . . . . . . . . . . . . . . . . .
+14 . . . . . . . . . . . . . . . . . . .
+13 . . . . . . . . . . . . . . . . . . .
+12 . . . . . . . . . . . . . . . . . . .
+11 . . . . . . . . . . . . . . . . . . .
+10 . . . . . . . . . . . . . . . . . . .
+ 9 . . . . . . . . . . . . . . . . . . .
+ 8 . . . . . . . . . . . . . . . . . . .
+ 7 . . . . . . . . . . . . . . . . . . .
+ 6 . . . . . . . . . . . . . . . . . . .
+ 5 . . . . . . . . . . . . . . . . . . .
+ 4 . . . . . . . . . . . . . . . . . . .
+ 3 . . . . . . . . . . . . . . . . . . .
+ 2 . . . . . . . . . . . . . . . . . . .
+ 1 . . . . . . . . . . . . . . . . . . .
+
+koSIMPLEscoreTERRITORYtaxSEKIsui0komi6.5
+Time taken: 7.10156
+Root visits: 40
+New playouts: 40
+NN rows: 39
+NN batches: 39
+NN avg batch size: 1
+PV: Q16 D4 C3 C4 D3 E4 F2
+Tree:
+: T  -4.40c W  -4.28c S  -0.12c ( -0.3 L  -0.2) N      40  --  Q16 D4 C3 C4 D3 E4 F2
+---Black(^)---
+Q16 : T  -4.41c W  -4.29c S  -0.12c ( -0.3 L  -0.2) LCB   -5.50c P 16.75% WF  39.0 PSV      39 N      39  --  Q16 D4 C3 C4 D3 E4 F2
+
+2026-07-20 11:28:40+0900: = Q16
+2026-07-20 11:28:40+0900: Controller: genmove w
+2026-07-20 11:28:43+0900: MoveNum: 1 HASH: D787FAD66281F76731DCD9C1B3387463
+   A B C D E F G H J K L M N O P Q R S T
+19 . . . . . . . . . . . . . . . . . . .
+18 . . . . . . . . . . . . . . . . . . .
+17 . . . . . . . . . . . . . . . . . . .
+16 . . . @ . . . . . . . . . . . X1. . .
+15 . . . . . . . . . . . . . . . . . . .
+14 . . . . . . . . . . . . . . . . . . .
+13 . . . . . . . . . . . . . . . . . . .
+12 . . . . . . . . . . . . . . . . . . .
+11 . . . . . . . . . . . . . . . . . . .
+10 . . . . . . . . . . . . . . . . . . .
+ 9 . . . . . . . . . . . . . . . . . . .
+ 8 . . . . . . . . . . . . . . . . . . .
+ 7 . . . . . . . . . . . . . . . . . . .
+ 6 . . . . . . . . . . . . . . . . . . .
+ 5 . . . . . . . . . . . . . . . . . . .
+ 4 . . . . . . . . . . . . . . . . . . .
+ 3 . . . . . . . . . . . . . . . . . . .
+ 2 . . . . . . . . . . . . . . . . . . .
+ 1 . . . . . . . . . . . . . . . . . . .
+
+koSIMPLEscoreTERRITORYtaxSEKIsui0komi6.5
+Time taken: 2.65522
+Root visits: 40
+New playouts: 10
+NN rows: 11
+NN batches: 11
+NN avg batch size: 1
+PV: D4 C3 C4 D3 E4 F2 Q4
+Tree:
+: T   4.50c W   4.40c S   0.11c ( +0.2 L  +0.2) N      40  --  D4 C3 C4 D3 E4 F2 Q4
+---White(^)---
+D4  : T   4.57c W   4.46c S   0.10c ( +0.2 L  +0.2) LCB    3.13c P 45.40% WF  27.0 PSV      31 N      27  --  D4 C3 C4 D3 E4 F2 Q4
+D16 : T   4.61c W   4.48c S   0.13c ( +0.3 L  +0.2) LCB    0.62c P 20.50% WF  12.0 PSV       8 N      12  --  D16 C17 D17 C16 D15 B14 D4
+
