@@ -144,7 +144,7 @@
   border-radius: 10px;
 }
 .board-shell {
-  max-width: 560px;
+  max-width: 600px;
 }
 .board,
 .board-bg {
@@ -175,10 +175,10 @@
     min-height: 56px;
   }
   .app.playing .layout {
-    padding: 0 10px calc(14px + env(safe-area-inset-bottom));
+    padding: 0 8px calc(14px + env(safe-area-inset-bottom));
   }
   .board-shell {
-    max-width: min(94vw, 520px);
+    max-width: min(100%, 600px);
   }
   .actions .btn {
     min-height: 56px;
@@ -526,7 +526,7 @@ h3 {
 }
 .board-shell {
   width: 100%;
-  max-width: 560px; /* 19×19 단일 판 — 중앙 컬럼이 허용하는 만큼 크게 (칸당 ~29px) */
+  max-width: 600px; /* 19×19 단일 판 — 중앙 컬럼이 허용하는 만큼 크게 */
   margin-left: auto;
   margin-right: auto;
   aspect-ratio: 1;
@@ -1769,13 +1769,13 @@ kbd {
    파일 곳곳의 미디어쿼리 오버라이드를 이기도록 맨 끝에서 한 번 고정.
    ---------------------------------------------------------------- */
 .board-shell {
-  max-width: 560px !important; /* 19×19 단일 판 — 판을 크게 (구 400px, 5·9줄 시절 제한) */
+  max-width: 600px !important; /* 19×19 단일 판 — 판을 크게 (구 400px, 5·9줄 시절 제한) */
   margin-left: auto !important;
   margin-right: auto !important;
 }
 .ending-banner,
 .marking-actions {
-  max-width: 560px !important; /* 판 폭과 정렬 */
+  max-width: 600px !important; /* 판 폭과 정렬 */
   margin-left: auto !important;
   margin-right: auto !important;
 }
@@ -1792,7 +1792,7 @@ kbd {
     flex-direction: column;
     gap: 8px;
     min-height: 560px;   /* 게임 콘텐츠 최소 높이 (스펙) */
-    padding: 12px 16px calc(16px + env(safe-area-inset-bottom));   /* 좌우 16px */
+    padding: 12px 8px calc(16px + env(safe-area-inset-bottom));   /* 좌우 8px — 판을 넓게(터치 편의) */
   }
 
   /* 플레이어 카드만 상단에, 수순 로그는 메뉴로 */
@@ -1817,8 +1817,8 @@ kbd {
     margin: 0;
   }
   .app.playing .stage .board-shell {
-    width: min(94vw, 520px) !important;       /* 게임판 · 화면 폭에 맞춰 크게 · 중앙 */
-    max-width: min(94vw, 520px) !important;
+    width: 100% !important;                    /* 게임판 · 여백 뺀 화면 폭 꽉 채움(터치 편의) */
+    max-width: min(100%, 600px) !important;
     height: auto;
     aspect-ratio: 1 / 1;
     margin: 0 auto !important;
@@ -1827,7 +1827,7 @@ kbd {
   .app.playing .stage .actions,
   .app.playing .stage .marking-actions {
     width: 100%;
-    max-width: min(94vw, 520px);
+    max-width: min(100%, 600px);
     margin-left: auto;
     margin-right: auto;
   }
