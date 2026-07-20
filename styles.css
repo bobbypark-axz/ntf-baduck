@@ -1792,7 +1792,7 @@ kbd {
     flex-direction: column;
     gap: 8px;
     min-height: 560px;   /* 게임 콘텐츠 최소 높이 (스펙) */
-    padding: 12px 8px calc(16px + env(safe-area-inset-bottom));   /* 좌우 8px — 판을 넓게(터치 편의) */
+    padding: 12px 4px calc(16px + env(safe-area-inset-bottom));   /* 좌우 4px — 판 최대한 넓게(터치 편의) */
   }
 
   /* 세로 레이아웃(폴드 펼침 884px 등 721~980 구간)에선 판이 좌우 끝까지 붙어
