@@ -912,39 +912,42 @@
 
   function aiAgreesToEnd() {
     if (state.moveNumber < state.size * state.size * 0.25) return false;
-    const moves = legalMoves();
-    if (moves.length < 4) return true;
-    // 빈 칸 위치 점수(evaluateMove)는 거의 모든 자리가 높게 나와 종국 감지에 쓸 수 없다.
-    // 대신 "실제로 무언가를 해내는 수"가 남았는지로 판단한다. 그런 수가 없으면 종국 제안.
-    return !hasMeaningfulMoves(moves);
+    return gameEffectivelyOver();
   }
 
-  // 종국 판정용: 잡기/단수/내 돌 살리기/경계 줄이기 같은 "의미 있는 수"가 하나라도 남았는지.
-  // 빈 땅 메우기(자기 집)나 공배(dame)만 남았으면 의미 있는 수가 없는 것으로 본다.
-  function hasMeaningfulMoves(moves) {
-    const color = state.turn;
+  // 종국 판정: 죽은 돌을 먼저 들어낸 뒤(이미 갇힌 돌은 잡은 셈), 양쪽 어느 색도
+  // "살아있는 그룹을 잡기/단수치기" 또는 "단수 몰린 내 그룹 살리기"가 남지 않았으면 종국.
+  // 공배(dame)·자기 집 메우기는 의미 없는 수로 보고 무시한다(끝내기가 막히던 원인).
+  function gameEffectivelyOver() {
+    const dead = detectDeadStones(state.board);
+    const b = cloneBoard(state.board);
+    for (const key of dead) { const [x, y] = key.split(",").map(Number); b[y][x] = EMPTY; }
+    return !hasLiveTacticalMove(b, BLACK) && !hasLiveTacticalMove(b, WHITE);
+  }
+
+  // (죽은 돌 제거된 보드에서) color가 둘 수 있는 "전술적으로 의미 있는 수"가 하나라도 있나.
+  function hasLiveTacticalMove(board, color) {
+    const size = board.length;
     const opp = color === BLACK ? WHITE : BLACK;
-    for (const [x, y] of moves) {
-      const next = cloneBoard(state.board);
-      next[y][x] = color;
-      // ① 상대 돌을 잡거나 단수로 모는 수
-      for (const [nx, ny] of neighbors(x, y)) {
-        if (next[ny][nx] === opp && getGroup(next, nx, ny).liberties.size <= 1) return true;
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        if (board[y][x] !== EMPTY) continue;
+        // 돌과 맞닿지 않은 순수 빈땅은 전술수가 될 수 없음 — 건너뛰어 속도 확보
+        if (!neighbors(x, y, size).some(([nx, ny]) => board[ny][nx] !== EMPTY)) continue;
+        const sim = applySim(board, x, y, color);
+        if (!sim) continue; // 자살수 등 불법
+        if (sim.captured > 0) return true; // ① 잡기
+        // ② 살아있는 상대 그룹을 단수로 몲
+        for (const [nx, ny] of neighbors(x, y, size)) {
+          if (sim.board[ny][nx] === opp && getGroup(sim.board, nx, ny).liberties.size === 1) return true;
+        }
+        // ③ 단수에 몰린 내 그룹 살리기
+        for (const [nx, ny] of neighbors(x, y, size)) {
+          if (board[ny][nx] === color
+            && getGroup(board, nx, ny).liberties.size === 1
+            && getGroup(sim.board, x, y).liberties.size > 1) return true;
+        }
       }
-      // ② 단수에 몰린 내 돌을 살리는 수(놓은 뒤 활로가 2개 이상으로 늘어나면 구제로 본다)
-      for (const [nx, ny] of neighbors(x, y)) {
-        if (state.board[ny][nx] === color
-          && getGroup(state.board, nx, ny).liberties.size === 1
-          && getGroup(next, x, y).liberties.size > 1) return true;
-      }
-      // ③ 상대와 맞닿아 있으면서 빈 공간을 낀 경계 다툼(침투·삭감)
-      let touchesOpp = false;
-      let openSpace = false;
-      for (const [nx, ny] of neighbors(x, y)) {
-        if (state.board[ny][nx] === opp) touchesOpp = true;
-        else if (state.board[ny][nx] === EMPTY) openSpace = true;
-      }
-      if (touchesOpp && openSpace) return true;
     }
     return false;
   }
