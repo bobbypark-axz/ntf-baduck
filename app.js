@@ -1363,7 +1363,6 @@
             <button class="btn neutral icon" data-resume-play>${icon("play")} 더 두기</button>
           </div>` : ""}
           <div class="modal-actions">
-            <button class="btn neutral" data-close-result>판 살펴보기</button>
             <button class="btn primary icon" data-rematch>${icon("refresh")} 다시 한 판</button>
           </div>
         </div>
