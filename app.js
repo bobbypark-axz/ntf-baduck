@@ -1023,10 +1023,28 @@
         // 엔진이 준 수가 거부되면(엔진·앱의 패 해석 차 같은 희귀 케이스) 패스로 진행
         if (!move || !place(move[0], move[1]).ok) pass();
         state.thinking = false;
+        if (checkHumanWinEarly()) { render(); return; } // 유저가 크게 이겼으면 즉시 종국
         maybeAiProposeEnd();
         render();
       });
     }, delay);
+  }
+
+  // 유저가 점수(집)의 85% 이상을 차지하면 후반 끝내기를 생략하고 즉시 종국(유저 승).
+  // 점수 비율은 초반엔 집계된 점수 자체가 적어 변동이 크므로, 판의 25% 이상 둔 뒤에만 본다.
+  function checkHumanWinEarly() {
+    if (state.ended || state.phase !== "play") return false;
+    if (state.moveNumber < state.size * state.size * 0.25) return false; // 초반 추정 노이즈 방지
+    const s = scoreBoard();
+    const humanScore = state.human === BLACK ? s.black : s.white;
+    const aiScore = state.human === BLACK ? s.white : s.black;
+    const total = humanScore + aiScore;
+    if (total <= 0) return false;
+    if (humanScore / total >= 0.85) { // 유저가 전체 점수의 85% 이상
+      autoFinish("점수의 85% 이상을 차지해 종국했어요. 승리! 🎉");
+      return true;
+    }
+    return false;
   }
 
   function maybeAiProposeEnd() {
