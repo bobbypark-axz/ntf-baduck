@@ -1357,11 +1357,6 @@
               <div class="score-detail">집 ${tWhite} · 포로 ${result.prisoners ? result.prisoners[WHITE] : state.captures[WHITE]} · 덤 ${komiFor(state.size)}</div>
             </div>
           </div>
-          ${!resigned && !timeout ? `
-          <div class="modal-actions">
-            <button class="btn neutral icon" data-fix-dead>${icon("end")} 판정 고치기</button>
-            <button class="btn neutral icon" data-resume-play>${icon("play")} 더 두기</button>
-          </div>` : ""}
           <div class="modal-actions">
             <button class="btn primary icon" data-rematch>${icon("refresh")} 다시 한 판</button>
           </div>
