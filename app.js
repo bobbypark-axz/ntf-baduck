@@ -873,11 +873,10 @@
     maybeAi();
   }
 
-  // 끝내기: AI 동의로 막지 않고 무조건 종국한다. 판정(죽은 돌·집)이 이상하면
-  // 결과 화면의 [판정 고치기]로 사석을 탭 수정하거나 [더 두기]로 이어 둘 수 있다.
+  // 끝내기: AI 동의로 막지 않고 무조건 종국한다(죽은 돌은 자동 추정해 채점).
   function proposeEnding() {
     if (state.ended || state.phase !== "play" || state.thinking) return;
-    autoFinish("종국했어요. 판정이 이상하면 [판정 고치기]로 고쳐주세요.");
+    autoFinish("종국했어요.");
     render();
   }
 
