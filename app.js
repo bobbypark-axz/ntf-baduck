@@ -874,10 +874,18 @@
   }
 
   // 끝내기: AI 동의로 막지 않고 무조건 종국한다(죽은 돌은 자동 추정해 채점).
+  // 되돌릴 수 없으므로(보정 UI 없음) 실수 탭 방지용 확인 팝업을 한 번 거친다.
   function proposeEnding() {
     if (state.ended || state.phase !== "play" || state.thinking) return;
-    autoFinish("종국했어요.");
-    render();
+    askConfirm({
+      title: "지금 끝낼까요?",
+      body: "지금 판 그대로 채점해서 승패가 정해져요.",
+      confirm: "끝내기",
+      onConfirm: () => {
+        autoFinish("종국했어요.");
+        render();
+      },
+    });
   }
 
   function aiAgreesToEnd() {
