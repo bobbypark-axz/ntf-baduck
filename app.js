@@ -873,41 +873,12 @@
     maybeAi();
   }
 
+  // 끝내기: AI 동의로 막지 않고 무조건 종국한다. 판정(죽은 돌·집)이 이상하면
+  // 결과 화면의 [판정 고치기]로 사석을 탭 수정하거나 [더 두기]로 이어 둘 수 있다.
   function proposeEnding() {
-    if (state.ended || state.phase !== "play") return;
-    if (state.thinking) return;
-    if (state.moveNumber < state.size * state.size * 0.25) {
-      state.endingNotice = "아직 종국하기엔 일러요. 조금 더 둔 뒤 다시 시도해주세요.";
-      window.clearTimeout(proposeEnding.timer);
-      proposeEnding.timer = window.setTimeout(() => {
-        state.endingNotice = "";
-        render();
-      }, 2200);
-      render();
-      return;
-    }
-    if (aiAgreesToEnd()) {
-      autoFinish("이제 둘 곳이 거의 없어 종국했어요.");
-    } else if (gameIsDecided()) {
-      autoFinish("점수 차가 커서 AI가 종국에 동의했어요.");
-    } else {
-      state.endProposalCooldown = 8;
-      state.endingNotice = "AI가 아직 둘 곳이 있대요. 조금 더 둔 뒤 다시 끝내기를 눌러주세요.";
-      window.clearTimeout(proposeEnding.timer);
-      proposeEnding.timer = window.setTimeout(() => {
-        state.endingNotice = "";
-        render();
-      }, 2400);
-    }
+    if (state.ended || state.phase !== "play" || state.thinking) return;
+    autoFinish("종국했어요. 판정이 이상하면 [판정 고치기]로 고쳐주세요.");
     render();
-  }
-
-  // 아직 둘 곳이 남았어도 점수 차가 압도적이면 종국 제안을 받아준다(캐주얼 UX).
-  // aiShouldResign과 같은 임계값 — 다만 이쪽은 이기고 지는 방향과 무관.
-  function gameIsDecided() {
-    if (state.moveNumber < state.size * 2) return false; // 초반엔 추정이 불안정
-    const s = scoreBoard();
-    return Math.abs(s.black - s.white) >= Math.max(18, state.size * state.size * 0.22);
   }
 
   function aiAgreesToEnd() {
@@ -1386,6 +1357,11 @@
               <div class="score-detail">집 ${tWhite} · 포로 ${result.prisoners ? result.prisoners[WHITE] : state.captures[WHITE]} · 덤 ${komiFor(state.size)}</div>
             </div>
           </div>
+          ${!resigned && !timeout ? `
+          <div class="modal-actions">
+            <button class="btn neutral icon" data-fix-dead>${icon("end")} 판정 고치기</button>
+            <button class="btn neutral icon" data-resume-play>${icon("play")} 더 두기</button>
+          </div>` : ""}
           <div class="modal-actions">
             <button class="btn neutral" data-close-result>판 살펴보기</button>
             <button class="btn primary icon" data-rematch>${icon("refresh")} 다시 한 판</button>
